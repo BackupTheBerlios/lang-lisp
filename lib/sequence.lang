@@ -1,0 +1,48 @@
+;;
+;;  Copyright (C) 2009-02-07 Jasper den Ouden.
+;;
+;;  This file is part of Lang(working title).
+;;
+;;  Lang is free software: you can redistribute it and/or modify
+;;  it under the terms of the GNU Affero General Public License as published
+;;  by the Free Software Foundation, either version 3 of the License, or
+;;  (at your option) any later version.
+;;
+;;  Lang is distributed in the hope that it will be useful,
+;;  but WITHOUT ANY WARRANTY; without even the implied warranty of
+;;  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;;  GNU Affero General Public License for more details.
+;;
+;;  You should have received a copy of the GNU Affero General Public License
+;;  along with Lang.  If not, see <http://www.gnu.org/licenses/>.
+;;
+
+
+
+#TODO Allow multiple of these in sequence.(like + etc.)
+(defun append :only-record :specify-as-used
+       ((a (index-sequence (integer) seq-tp))
+        (b (index-sequence (integer) seq-tp)))
+  "Append function for sequences with good index-access."
+  (with-slots (len) a
+    (let1 (new (make-index-sequence (+ len (slot-get 'len b)) seq-tp))
+      (do-times len (i)
+        (set (aref i new) (aref i a))_)
+      (do-times (slot-get 'len b) (i)
+	(set (aref (+ i len) new) (aref i b)))
+      new)))
+
+(defun subseq :only-record :specify-as-used
+       ((a (index-sequence (integer) seq-tp))
+        (from (integer)) (to (integer)))
+  "Sub sequence function for sequences with good index-access."
+  (let1 (new (make-index-sequence (- to from) seq-tp))
+    (with-slots (len) a
+      (do-times len (i)
+        (set (aref i new) (aref (+ from i) a))))
+    new))
+
+#TODO: the &optional.
+(defun subseq :inline ((a (index-sequence (integer) seq-tp))
+ 		       (from (integer)))
+  (subseq a from (get-slot 'len a)))

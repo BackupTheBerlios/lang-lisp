@@ -1,0 +1,176 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML>
+<HEAD>
+	<META HTTP-EQUIV="CONTENT-TYPE" CONTENT="text/html; charset=utf-8">
+	<TITLE></TITLE>
+	<META NAME="GENERATOR" CONTENT="OpenOffice.org 2.4  (Unix)">
+	<META NAME="CREATED" CONTENT="20090210;15025600">
+	<META NAME="CHANGEDBY" CONTENT="jasper">
+	<META NAME="CHANGED" CONTENT="20090211;565300">
+</HEAD>
+<BODY LANG="nl-NL" DIR="LTR">
+<P>I declare this particular file in the public domain. 
+</P>
+<P><B>NOTE that this is out of date!!</B></P>
+<H3>Utilities</H3>
+<P><A HREF="argument-positioner.lisp"><B>argument-positioner.lisp</B></A></P>
+<P>Some stuff implementing extracting list elements based on an
+argument list like that of macros. Can do argument sublists, has
+&amp;optional, &amp;key, &amp;rest. TODO also allow for default
+values for &amp;key, &amp;optional.</P>
+<H3>Reading system</H3>
+<P><A HREF="reader.lisp"><B>reader.lisp</B></A></P>
+<P STYLE="margin-bottom: 0cm"><BR>
+</P>
+<P STYLE="font-weight: medium"><FONT SIZE=3>Code to read in
+s-expressions from files. Currently rather old code. TODO Probably
+need to rewrite, in order to:</FONT></P>
+<UL>
+	<LI><P STYLE="font-weight: medium"><FONT SIZE=3>Use read-line,
+	because it doesn't make sense to have newlines as nthing else then
+	whitespace anyway.</FONT></P>
+	<LI><P STYLE="font-weight: medium"><FONT SIZE=3>Reading in a series
+	of tokens first, and then make it a tree using those tokens that can
+	do that.</FONT></P>
+	<UL>
+		<LI><P STYLE="font-weight: medium"><FONT SIZE=3>Macros at this
+		level? Or would that make things too complicated? Maybe implement,
+		but not use in language.</FONT></P>
+		<LI><P STYLE="font-weight: medium"><FONT SIZE=3>Additional tree
+		specification methods like the sublisting with ;, | ? and with
+		xml-like marking?</FONT></P>
+	</UL>
+</UL>
+<H3>Processing system</H3>
+<P><A HREF="fun-base.lisp"><B>fun-base.lisp</B></A></P>
+<P>Contains class of state of resolving types and macro, and some
+functions for namespaces,(partly) getting symbols in current
+namespace. (Bit of a mix of stuff.)</P>
+<P><A HREF="typeset.lisp"><B>typeset.lisp</B></A></P>
+<P>Key part of lang, can select the most specific matching version of
+a class of things specified by a list of types to do so from. Can of
+course also add these things. 
+</P>
+<P>Used for function overloading but also macro overloading (latter
+needs to have number of arguments for which the type is needed.)</P>
+<P>TODO what to do about type-eql function? Type macros? What does it
+need to support 'or type, or numbers with ranges?</P>
+<P><A HREF="typeset-named.lisp"><B>typeset-named.lisp</B></A></P>
+<P STYLE="font-weight: medium; text-decoration: none">Basically
+typeset through the getting-symbols of fun-base.lisp.</P>
+<P><A HREF="type-util.lisp"><U><B>type-util.lisp</B></U></A></P>
+<P STYLE="font-weight: medium; text-decoration: none">Some utilities
+regarding types. Most importantly, filling in variables in types and
+getting what the variables are in a more general type.</P>
+<P STYLE="font-weight: medium; text-decoration: none">And out-type,
+which gets the type of things. For a function it might need to use
+typelist-fill.</P>
+<P><A HREF="fun-get.lisp"><B>fun-get.lisp</B></A></P>
+<P>Defines class for lang functions and uses typeset select to make
+function getting and setting. Except for when it resolves a function
+with the flag :specify-as-used, it is pretty much a wrapper around
+typeset-select. TODO make &amp;optional and &amp;key arguments
+possible by making a macro that returns with :defer-to-fun.</P>
+<P><A HREF="mac-get.lisp"><B>mac-get.lisp</B></A></P>
+<P>Defines class for both normal and raw macros. Rawmac's can get the
+state of the processing and, as such, add variables, normal macros
+can only return a manipulated code tree. 
+</P>
+<P>Also can use types of the arguments to determine what macros to
+use, some fixed number of first arguments does this.</P>
+<P>Note that conversion to other code, like C, depends on the results
+of a few macros.(Like those in macs/macs.lisp) 
+</P>
+<P><A HREF="fun-resolve.lisp"><B>fun-resolve.lisp</B></A></P>
+<P>Processing code, expanding macros, and determining which functions
+should be used in the function overloading. 
+</P>
+<P>It is 'function inference' instead of 'type inference',
+appararently function overloading and type inference 'overlap',
+however, it might be useful to do some type inference too, based on
+when a function is defined with argument types too general for the
+functions used in its body. 
+</P>
+<P><A HREF="states.lisp"><B>states.lisp</B></A></P>
+<P>This file contains extensions of the base states that various
+macros use. It needs to be in one file because it uses class
+derivation. TODO macros should be able to extend the state as needed.</P>
+<H3>Optimization</H3>
+<P>This is to be done after the initial processing. Don't really have
+good ideas yet, but some notes: 
+</P>
+<UL>
+	<LI><P STYLE="margin-bottom: 0cm">Finding patterns and once found
+	call optimizing function. (A little macro-like)</P>
+	<LI><P STYLE="margin-bottom: 0cm">Having equivalences with a either
+	a direction in which it is more efficient, or an estimator to check
+	both sides, or call an optimizing function. 
+	</P>
+	<LI><P>When to inline? Should peek inside functions to find
+	equivalences that might warrant inlining even if it shouldn't if you
+	don't regard equivalences. 
+	</P>
+</UL>
+<P>I do not really know how to handle this, but the first one should
+be doable with typeset-like matching. 
+</P>
+<H3>Conversion to other languages/machine readable code</H3>
+<P><A HREF="to-c.lisp"><B>to-c.lisp</B></A></P>
+<P>Conversion of fun-resolve result to C. Depends on results from
+some of the base macros.</P>
+<H4>TODO</H4>
+<UL>
+	<LI><P STYLE="margin-bottom: 0cm">Conversion to lisp would be nice!
+	A nice way to get for macros to be created in lang itself. Forth is
+	also an option.</P>
+	<LI><P STYLE="margin-bottom: 0cm">Many of the stuff it does could
+	apply for other languages too. Maybe it should convert to some
+	'in-between' state.</P>
+	<LI><P STYLE="margin-bottom: 0cm">Letting conversion to C also
+	optionally produce some interfacing of the C result to common lisp. 
+	</P>
+	<LI><P>If i want to make it wholly dynamic, dependencies of
+	functions need to be noted, and functions updated when other
+	functions change. 
+	</P>
+</UL>
+<H3>Declaration of primitive elements</H3>
+<P><A HREF="macs/macs.lisp"><B>macs/macs.lisp</B></A></P>
+<P>Basic macros. Currently does: quote, namespace progn, let, (let1,
+let-ret)</P>
+<P><A HREF="macs/mac-fun.lisp"><B>macs/mac-fun.lisp</B></A></P>
+<P>Function creation and function as an argument usuage. Does: defun,
+set, will-defun, specialize-fun, lambda, fun-of(a symbol), funcall,
+flet, (flet1). TODO test funcall and those, re-test flet.</P>
+<P><A HREF="macs/mac-loops.lisp"><B>macs/mac-loops.lisp</B></A></P>
+<P STYLE="font-weight: medium">Makes you loops. Does: while, do, do1,
+do-times. (Note that i plan to make do-times able to do it without
+loop, if the count is (eql(number n)))</P>
+<P><A HREF="macs/mac-cond.lisp"><B>macs/mac-cond.lisp</B></A></P>
+<P STYLE="font-weight: medium">Macros for conditional statements.
+TODO need to make the 'or type work properly, hmm, maybe just force
+it to be a single type first..</P>
+<P><A HREF="macs/struct.lisp"><B>macs/struct.lisp</B></A></P>
+<P>Has classes and adds to state class to keep track of which
+structures are already there. 
+</P>
+<P>Also defines macros to create functional structure types. (Similar
+to templates in C++.) Also macros to access slots, and get their
+size. TODO add 'structure macros' here? Support 'or, etc.</P>
+<P><A HREF="macs/lib.lisp"><B>macs/lib.lisp</B></A></P>
+<P>Macro to load files. Macro inside should(next to progn?) in
+principle be able to be the only manually loaded macro. TODO make it
+so.</P>
+<P><A HREF="macs/program.lisp"><B>macs/program.lisp</B></A></P>
+<P><SPAN STYLE="font-weight: medium">Entirely still to be made. I
+want to make programs their own namespace, with a 'main function, a
+structure with the variables, and all its functions preceded with
+this structure.</SPAN></P>
+<P><FONT SIZE=4><B>Libraries</B></FONT></P>
+<P STYLE="font-weight: medium"><FONT SIZE=3>TODO make rules when
+something is considered a(what level of) library. </FONT>
+</P>
+<P><BR><BR>
+</P>
+</BODY>
+</HTML>

@@ -1,0 +1,172 @@
+<!doctype html public "-//W3C//DTD HTML 4.0 Transitional//EN">
+<p>I declare this particular file in the public domain. 
+</p>
+
+<b>Note that a lot of this is untested/unfinished, and that this file itself might be 
+out-of date.</b>
+
+<h3>Utilities</h3>
+<p><a href="argument-positioner.lisp"><b>argument-positioner.lisp</b></a></p>
+<p>Some stuff implementing extracting list elements based on an
+argument list like that of macros. Can do argument sublists, has
+&amp;optional, &amp;key, &amp;rest. TODO also allow for default
+values for &amp;key, &amp;optional.</p>
+<h3>Reading system</h3>
+<p><a href="reader.lisp"><b>reader.lisp</b></a></p>
+Code to read in s-expressions from files. Currently rather old code. TODO Probably
+need to rewrite, in order to:</p>
+<ul>
+	<li>Use read-line, because it doesn't make sense to have newlines as nthing else then
+	whitespace anyway.</p>
+	<li>Reading in a series
+	of tokens first, and then make it a tree using those tokens that can
+	do that.</p>
+	<ul>
+		<li>Macros at this
+		level? Or would that make things too complicated? Maybe implement,
+		but not use in language.</p>
+		<li>Additional tree
+		specification methods like the sublisting with ;, | ? and with
+		xml-like marking?</p>
+	</ul>
+</ul>
+<h3>Processing system</h3>
+<p><a href="fun-base.lisp"><b>fun-base.lisp</b></a></p>
+<p>Contains class of state of resolving types and macro, and some
+functions for namespaces,(partly) getting symbols in current
+namespace. (Bit of a mix of stuff.)</p>
+<p><a href="typeset.lisp"><b>typeset.lisp</b></a></p>
+<p>Key part of lang, can select the most specific matching version of
+a class of things specified by a list of types to do so from. Can of
+course also add these things. 
+</p>
+<p>Used for function overloading but also macro overloading (latter
+needs to have number of arguments for which the type is needed.)</p>
+<p>TODO what to do about type-eql function? Type macros? What does it
+need to support 'or type, or numbers with ranges?</p>
+<p><a href="typeset-named.lisp"><b>typeset-named.lisp</b></a></p>
+Basically typeset through the getting-symbols of fun-base.lisp.</p>
+<p><a href="type-util.lisp"><b>type-util.lisp</b></a></p>
+Some utilities regarding types. Most importantly, filling in variables in types and
+getting what the variables are in a more general type.</p>
+And out-type, which gets the type of things. For a function it might need to use
+typelist-fill.</p>
+<p><a href="fun-get.lisp"><b>fun-get.lisp</b></a></p>
+<p>Defines class for lang functions and uses typeset select to make
+function getting and setting. Except for when it resolves a function
+with the flag :specify-as-used, it is pretty much a wrapper around
+typeset-select. TODO make &amp;optional and &amp;key arguments
+possible by making a macro that returns with :defer-to-fun.</p>
+<p><a href="mac-get.lisp"><b>mac-get.lisp</b></a></p>
+<p>Defines class for both normal and raw macros. Rawmac's can get the
+state of the processing and, as such, add variables, normal macros
+can only return a manipulated code tree. 
+</p>
+<p>Also can use types of the arguments to determine what macros to
+use, some fixed number of first arguments does this.</p>
+<p>Note that conversion to other code, like C, depends on the results
+of a few macros.(Like those in macs/macs.lisp) 
+</p>
+<p><a href="fun-resolve.lisp"><b>fun-resolve.lisp</b></a></p>
+<p>Processing code, expanding macros, and determining which functions
+should be used in the function overloading. 
+</p>
+<p>It is 'function inference' instead of 'type inference',
+appararently function overloading and type inference 'overlap',
+however, it might be useful to do some type inference too, based on
+when a function is defined with argument types too general for the
+functions used in its body. 
+</p>
+<p><a href="states.lisp"><b>states.lisp</b></a></p>
+<p>This file contains extensions of the base states that various
+macros use. It needs to be in one file because it uses class
+derivation. TODO macros should be able to extend the state as needed.</p>
+<h3>Optimization</h3>
+<p>This is to be done after the initial processing. Don't really have
+good ideas yet, but some notes: 
+</p>
+<ul>
+	<li>Finding patterns and once found
+	call optimizing function. (A little macro-like)</p>
+	<li>Having equivalences with a either
+	a direction in which it is more efficient, or an estimator to check
+	both sides, or call an optimizing function. 
+	</p>
+	<li>When to inline? Should peek inside functions to find
+	equivalences that might warrant inlining even if it shouldn't if you
+	don't regard equivalences. 
+</ul>
+<p>I do not really know how to handle this, but the first one should
+be doable with typeset-like matching. 
+</p>
+<h3>Conversion to other languages/machine readable code</h3>
+<p><a href="to-c.lisp"><b>to-c.lisp</b></a></p>
+<p>Conversion of fun-resolve result to C. Depends on results from
+some of the base macros.</p>
+<h4>TODO</h4>
+<ul>
+	<li>Conversion to lisp would be nice!
+	A nice way to get for macros to be created in lang itself. Forth is
+	also an option.</p>
+	<li>Many of the stuff it does could
+	apply for other languages too. Maybe it should convert to some
+	'in-between' state.</p>
+	<li>Letting conversion to C also
+	optionally produce some interfacing of the C result to common lisp. 
+	</p>
+	<li><p>If i want to make it wholly dynamic, dependencies of
+	functions need to be noted, and functions updated when other
+	functions change. 
+	</p>
+</ul>
+<h3>Declaration of primitive elements</h3>
+<p><a href="macs/macs.lisp"><b>macs/macs.lisp</b></a></p>
+<p>Basic macros. Currently does: quote, namespace progn, let, (let1,
+let-ret)</p>
+<p><a href="macs/mac-fun.lisp"><b>macs/mac-fun.lisp</b></a></p>
+<p>Function creation and function as an argument usuage. Does: defun,
+set, will-defun, specialize-fun, lambda, fun-of(a symbol), funcall,
+flet, (flet1). TODO test funcall and those, re-test flet.</p>
+<p><a href="macs/mac-loops.lisp"><b>macs/mac-loops.lisp</b></a></p>
+Makes you loops. Does: while, do, do1, do-times. (Note that i plan to 
+make do-times able to do it without
+loop, if the count is (eql(number n)))</p>
+<p><a href="macs/mac-cond.lisp"><b>macs/mac-cond.lisp</b></a></p>
+Macros for conditional statements.
+TODO need to make the 'or type work properly, hmm, maybe just force
+it to be a single type first..</p>
+<p><a href="macs/struct.lisp"><b>macs/struct.lisp</b></a></p>
+<p>Has classes and adds to state class to keep track of which
+structures are already there. 
+</p>
+<p>Also defines macros to create functional structure types. (Similar
+to templates in C++.) Also macros to access slots, and get their
+size. TODO add 'structure macros' here? Support 'or, etc.</p>
+<p><a href="macs/lib.lisp"><b>macs/lib.lisp</b></a></p>
+<p>Macro to load files. Macro inside should(next to progn?) in
+principle be able to be the only manually loaded macro. TODO make it
+so.</p>
+<p><a href="macs/program.lisp"><b>macs/program.lisp</b></a></p>
+<p>Entirely still to be made. I
+want to make programs their own namespace, with a 'main function, a
+structure with the variables, and all its functions preceded with
+this structure.</p>
+
+<h3>Types</h3>
+Basic types.
+
+<h3>Libraries</h3>
+TODO make rules when something is considered a(what level of) library. 
+</p>
+
+<p><b><a href="lib/array1.lisp">lib/array1.lisp</a>, <a href= "lib/array1.lang">lib/array1.lang</a></b>
+<p>Array of one dimension. Supports constant-lengths when more specific 
+then (array1 (eql (integer n)) item-type).
+</p>
+<p><b><a href="lib/c-math.lisp">c-math.lisp</a></b></p>
+<p>Allows use of cmath.h C library. Fairly simple just defining of the 
+function and how C calls them. Convert to .lang file when macros can 
+go lang-side.
+</p>
+
+</html>

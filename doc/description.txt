@@ -1,0 +1,20 @@
+Lang(working title) is project (currently)in common lisp to make a lisp-like language bettering existing lisps on a few fronts. Some of these aspects current lisps already have/could have with macros, but only at run time, and i don't see how they can optimize that to do the features at compile time. Currently it converts to C. 
+Some of the (more immediate) goals are:
+
+* 'Functional' structures. Structure types that can take types as arguments, somewhat similarly as C++ templates.
+
+* Function overloading. That is, choosing a function based on what the types entered as arguments are. By knowing the function you also know what its return type is, which can be used to determine more functions. Basically it is 'function inference' rather then 'type inference'. Function overloading tries to pick the most specific function, this is however ambigious, for that reason there is a preference function that always chooses 'what is most specific rightmost'.
+
+* Macro overloading. Macros can have a fixed number of their arguments evaluated, and then have the macro choosen in exactly the same manner as function overload. Alternatively raw macros can do all the evaluation themselves, but those should be regarded as internal. Unfortunately, since lang converts to C, macros currently need to be in common lisp.
+
+* References, with which you make functions non-functional, or use settable functions. (like '(defun (setf name) ..' in common lisp)
+
+* Making programs structures themselves. Say you wrote a program in main.lang, then compiling main.lang produces a function with main(argc, argv). But i also want programs to be able to use source of other programs like this (load-program "main.lang" 'main) which produces a structure progstruct and function main in the main: namespace. main:main, the structure contains all the variables, and the function 'does the whole program'. Any other functions called in main.lang are also put in the main: namespace, and the have main:progstruct as first argument.(Which internally uses with-slots to get the variables)
+
+* Loading stuff from other languages automatically would be cool. (load-file 'something.c') or (load-file 'something.h'). Don't know how hard this is though.
+
+* Other output languages. Common lisp itself, would be useful, so that the macros can be written in Lang itself in the future.
+
+It is not intended for actual use other then developing the language itself _YET_, please refrain from spreading the word too fast.(Actually have not compiled any C code produced yet, just checked the C-code by eye.) It seems unclear how much work still needs to be done. I hope to reach the milestone of 'Hello word' soon, for which i am working on strings.
+
+Note that the title is a working title. Please do not worry about trademark infringement.
