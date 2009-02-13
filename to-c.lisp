@@ -28,7 +28,8 @@
 	(|ptr|
 	 (format nil "~D*" (process-tp (second type))))
 	(t 
-	 (let ((typespec (gethash (car type) (slot-value state 'types))))
+	 (let ((typespec (gethash (car type)
+			         (get-extension-slot state :types 'types))))
 	   (cond
 	     ((and* typespec (c-name typespec) (null (cdr type)))
 	      (c-name typespec))
@@ -64,6 +65,9 @@ variable name."
 (defun tabbed-body (tab-depth)
   (format nil "{~~{~~~DT~~a;~~% ~~}}~~%" tab-depth))
 
+(defun tabbed (tab-depth)
+  (format nil "~~{~~~DT~~a;~~% ~~}" tab-depth))
+
 (defun c-gensym (state)
   (gen-c-name state))
 
@@ -95,10 +99,12 @@ variable name."
 	     output)))
   (flet ((process-list (code-list &key (tab-depth (+ tab-depth 1))
 				       body-level (var-precede ""))
-	   (loop for c in code-list
-	      collect (process c :tab-depth tab-depth
-			 :var-precede var-precede :body-level body-level))))
-  
+	   (let (out)
+	     (dolist (c code-list)
+	       (when-with r (process c :tab-depth tab-depth
+			  :var-precede var-precede :body-level body-level)
+		 (push r out))))))
+	 
   (unless (listp code) (setf- list code))
   
   (case (type-of (car code))
@@ -117,7 +123,12 @@ variable name."
 	   (format nil "~D(~{~a~^, ~})"
 		   (c-name fun) (process-list args)))))))
     (value ;Convert values encountered.
-     (c-return (format nil "~D" (from (car code)))))
+     (let ((out-type (out-type (car code))))
+       (cond
+	 ((and* (listp out-type) (eql (car out-type) '|eql|))
+	  (c-return (format nil "~D" (cadr out-type))))
+	 (t
+	  (c-return (format nil "~D" (from (car code))))))))
     (out   ;Convert various macro results.
      (with-slots (name) (car code)
        ;Some are special and are turned into C control structures, etcetera.
@@ -144,17 +155,21 @@ variable name."
 		  (error "Fun-top should imply body-level."))
 		(c-return
 		 (format nil (tabbed-body tab-depth)
-		   (loop for c on (cdr code) append
-		     (let ((pc (process (car c) :body-level t)))
-		       `(,@(process-collected)
-			   ,(if (null (cdr c))
-				(format nil "return ~D" pc) pc)))))))
+		   (loop for c on (cdr code) 
+		      append
+			(let ((pc (process (car c) :body-level t)))
+			  (when pc
+			    `(,@(process-collected)
+				,(if (null (cdr c))
+				     (format nil "return ~D" pc) pc))))))))
 	       (body-level ;At body level(also in fun-top), Take care of
 		           ;'body stuff' that came from arguments.
 		(format nil (tabbed-body tab-depth)
-		  (loop for c in (cdr code) append
-		    (let ((pc (process c :body-level t)))
-		      `(,@(process-collected) ,pc)))))
+		  (loop for c in (cdr code)
+		     append
+		       (let ((pc (process c :body-level t)))
+			 (when pc
+			   `(,@(process-collected) ,pc))))))
 	       (t   ;Not at body level, put in gen and
 ;TODO shouldnt be processing this, only at the receiving side, that way type 
 ;can be caught and more flexible.
@@ -168,6 +183,9 @@ variable name."
 	   (let*((gen (if body-level "" (gen-c-name state)))
 		 (new-vars
 		  (loop for v in (second code)
+		     unless (eql (car (out-type(if (listp (cadr v))
+						   (caadr v) (cadr v))))
+				 '|eql|)
 		     collect
 		       (format nil "~D= ~D"
 		        (process-type-var (out-type (if (listp (cadr v))
@@ -175,18 +193,34 @@ variable name."
 					  (car v) state
 			    :tab-depth tab-depth :do-auto do-auto)
 			(process (cadr v) :var-precede gen))))
-		 (body
-		  (process-list (cdr(third code)) :body-level t)))
-	     (if body-level
-	       (c-return(format nil (tabbed-body tab-depth)
-				(append new-vars out-prod)))
-	       (let ((gen (gen-c-name state)))
-		 (values
-		  gen
-		  (cons (append new-vars (strip-last body))
-			body-collected)
-		  (cons (list gen (car (last code)) (car (last body)))
-			gen-collected))))))
+		 (res (third code))
+		 (is-progn (and* (listp res)
+				 (eql (type-of (car res)) 'progn)))
+		 (body ;TODO can we stop peeking? (Might be subtil warning!)
+		  (if is-progn
+		    (process-list (cdr res) :body-level t)
+		    (process res :body-level t))))
+	     (cond
+	       ((= (length new-vars) 0) ;No variables, no work.
+		(if is-progn
+		  (c-return (format nil (tabbed tab-depth) body))
+		  (c-return body)))
+	       (body-level ;At body-level can put vars right here.
+		(c-return(format nil (tabbed-body tab-depth)
+				 `(,@new-vars
+				   ,@(if is-progn body (list body))))))
+	       (t ;Not at body level, pass vars on.
+		(let ((gen (gen-c-name state)))
+		  (values
+		   gen
+		   (cons (if is-progn `(,@new-vars ,@(strip-last body))
+			              new-vars)
+			 body-collected)
+		   (cons
+		    (list gen
+			  (if is-progn (car(last res)) res)
+			  (if is-progn (car (last body)) body))
+		    gen-collected)))))))
 	 (while
 	   (unless body-level ;TODO it should be able to do it.
 	     (error "While should not end up in functions."))
@@ -228,6 +262,11 @@ variable name."
 ;   	             could trigger it at wrong time!
 ;	   (unless body-level (error "May not return from outside body level"))
 ;	   (format nil "return(~D)" (process (second code))))
+	 (set
+	  (c-return (format nil "~D = ~D" (process (second code))
+			    (process (third code)))))
+	 (void-end
+	  (c-return nil))
 	 (t
 	   (error "Didn't recognize macro."))))))))))
 

@@ -56,12 +56,12 @@
  inference.)
 Returns the tree with the names replaced with function structs, and\
  variables paired with their types everywhere."
-  (with-slots (macs not-found-expression) state
+  (with-slots (macs) state
   (with-fun-resolve
   (cond
   ;Nothing.
     ((null code)
-     (make-instance 'out :name 'nil :type '(|void|)))
+     (make-instance 'out :name 'void-end :type '(|void|)))
   ;Already done for some reason.
     ((case (type-of code) ((fun value out) t))
      code)
@@ -132,8 +132,7 @@ Returns the tree with the names replaced with function structs, and\
 	     (t ;Just return the function with the arguments.
 	      (cons fun arguments))))
 	 (progn
-	   (funcall not-found-expression code arguments)
-	   (setf fun (make-instance 'out :name :not-found :code code))
+	   (setf fun (make-instance 'out :name :type-not-found :code code))
 	   (cons fun arguments)))))))))
 
 (defun count-var-dependencies (res &key (so-far (list nil)))

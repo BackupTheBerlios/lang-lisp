@@ -21,7 +21,7 @@
 (defvar *ts* (make-instance 'typeset))
 
 (setf (slot-value *state* 'manual-type-generality)
-      (lambda (tp c-tp) nil))
+      nil)
 
 (defun simple-test (typeset &key (count 1000)
 		         (end-chance 0.3) (maxlen 5) (maxdepth 5))
@@ -57,7 +57,11 @@ It returns the erronous ones, nil if none."
        found))))
 
 
-(length(simple-test *ts* :maxlen 3 :maxdepth 3 :count 1000))
+(setf *err* (simple-test *ts* :maxlen 3 :maxdepth 3 :count 1000))
+
+(car *err*)
+
+(slot-value (nth 4 (car *err*)) 'arg-types)
 
 (print 'a)
 

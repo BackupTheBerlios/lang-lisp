@@ -19,6 +19,19 @@
 
 (in-package #:lang)
 
+(defclass types-state ()
+  ((types :initarg :types :initform (make-hash-table))
+   
+   (pointer-type-size :initarg :pointer-type-size
+		      :initform 16 :type integer)
+   (arbitrary-type-size :initarg :arbitrary-type-size
+			:initform 16 :type integer)))
+
+(unless (get-extension *state* :types)
+  (setf (get-extension *state* :types) (make-instance 'types-state)))
+
+;If it does not have the extension already, extend it.
+
 ;;TODO creation of stuff.
 
 (defclass base-type ()
@@ -37,25 +50,26 @@
   "Adds an type."
   (with-gensyms (the-name)
     `(let ((,the-name ,name))
-      (setf (gethash ,the-name (slot-value ,state 'types))
+      (setf (gethash ,the-name (get-extension-slot ,state :types 'types))
 	    (make-instance ,type :name ,the-name ,@rest)))))
 
 (defgeneric size-of (type with-el state)
   (:documentation "Returns the size of whatever the representation of the\
  type. WARNING dont confuse cl:type-of! I made no such function."))
 
-(defmethod size-of ((type symbol) (with-el list) (state state-with-types))
+(defmethod size-of ((type symbol) (with-el list) (state types-state))
   (if-with typed (assoc type with-el)
-        ;Got that type specified, use it.
-	   (size-of (cadr typed) with-el state)
-	;Not specified, give cost of arbitrary type.
-	   (slot-value state 'arbitrary-type-size)))
+    ;Got that type specified, use it.
+      (size-of (cadr typed) with-el state)
+    ;Not specified, give cost of arbitrary type.
+      (get-extension-slot state :types 'arbitrary-type-size)))
 
-(defmethod size-of ((type list) (with-el list) (state state-with-types))
-  (size-of (gethash (car type) (slot-value state 'types)) with-el state))
+(defmethod size-of ((type list) (with-el list) (state types-state))
+  (size-of (gethash (car type) (get-extension-slot state :types 'types))
+	   with-el state))
 
 (defmethod size-of :around ((type atomic-type) (with-el list)
-			    (state state-with-types))
+			    (state types-state))
   (with-slots (size size-fun) type
     (cond
       (size-fun (funcall size-fun type with-el))
@@ -63,10 +77,10 @@
       (t        (error "Atomic types need manual size determination.")))))
 
 (defmethod size-of :around ((type struct-type) (with-el list)
-			    (state state-with-types))
+			    (state types-state))
   (shift-upto type nil with-el state))
 
-(defmethod size-of (type (with-el list) (state state-with-types))
+(defmethod size-of (type (with-el list) (state types-state))
   (print (list :error 'missed-type type)) 1)
 
 (defun shift-upto (struct upto-element with-el state)
@@ -89,8 +103,8 @@
 
 ;TODO one with non-constant slot name? how about (not(any))?
 (rawmac-add get-slot () ((eql (symbol)) (any)) (slot-name obj)
-;  "Macro returning the code and type getting the slot that is wanted."
-  (with-slots (types) state
+  "Macro returning the code and type getting the slot that is wanted."
+  (with-slots (types) (get-extension state :types)
   (let*((obj-res (fun-resolve obj type-of :state state))
 	(type    (out-type obj-res))
 	slot-type)
@@ -125,12 +139,13 @@
 Asked for slot ~D in struct ~D." slot-name (car type))))))))
 
 (rawmac-add size-of () (anything) (obj)
-;  "Size of an type. (Without extra pointer indirection.)"
+  "Size of an type. (Without extra pointer indirection.)"
   (let*((type (out-type(fun-resolve obj type-of :state state)))
 	(typespec
 	 (case (type-of  type)
 	   (symbol type)
-	   (cons   (gethash (car type) (slot-value state 'types))))))
+	   (cons   (gethash (car type)
+			    (get-extension-slot state :types 'types))))))
     (make-instance 'out :name 'size-of
       :type `(eql ,(size-of type
 			    (case (type-of typespec)
@@ -138,9 +153,9 @@ Asked for slot ~D in struct ~D." slot-name (car type))))))))
 			    state)))))
 
 (rawmac-add struct (:code code) () (name)
-;  "Struct creation macro."
+  "Struct creation macro."
   (argumentize-list (name) (cdr code)
-    (setf (gethash name (slot-value state 'types))
+    (setf (gethash name (get-extension-slot state :types 'types))
 	  (make-instance 'struct-type :name name :code code))
     (list(make-instance 'out :name 'struct :type '(:structspec)
 			:code code))))

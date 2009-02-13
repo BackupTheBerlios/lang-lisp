@@ -20,7 +20,7 @@
 
 (defun random-tree (end-chance maxlen maxdepth &key top
 		    (from-symbols '(a b c d e f g h i j k l m n o p
-				    q r s t u v w x y z)))
+				    q r s u v w x y z)))
   "Creates a random tree."
   (flet ((gen-sym ()
 	   (nth (random (length from-symbols)) from-symbols)))

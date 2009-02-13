@@ -48,8 +48,11 @@
 (load "macs/struct.lisp")
 
 ;Macros, functions and types regarding:
+(load "types/any.lisp")
+(load "types/eql.lisp")
 (load "types/number-types.lisp")
 (load "types/pointer-types.lisp")
 
 ;Output.(Uses the macros.
 (load "to-c.lisp")
+

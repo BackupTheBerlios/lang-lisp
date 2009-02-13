@@ -1,55 +1,88 @@
-Note that there are TODOs in here, this is due to the early stage of Langs development.
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+
+
+   <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+   <title>Explanation what lang is to be</title>
+</head><body>
+
+<a href="http://developer.berlios.de">
+<img src="http://developer.berlios.de/bslogo.php?group_id=10613" width="124" height="32" border="0" alt="BerliOS Logo" /></a> 
+
+<p>Note the is due to the early stage of Langs development.</p>
 
 <h2>What it is/what it wants to be</h2>
 
-<p>Lang is meant to be different then earlier lisps(and languages) in its type system
-and how the user interacts with it. It uses function overloading for functions and 
-macros.</p>
+<p>Lang is meant to become:
+<ul>
+  <li>A general purpose language, being able to convert to many languages. This is a
+    far future goal.</li>
+  <li>Different then earlier lisps(and languages) in its type system and how the user
+    is capable to interact with it. It uses function overloading for functions and 
+    macros.</li>
+  <li>Modular, as much as possible must either be a library, or written in a very
+    library-like manner. The specification should be the same way.</li>
+  <li>Flexible, the language needs to be powerful enough to make many programming
+    paradigms possible in libraries. These libraries also need to actually be made.</li>
+  <li>Have sufficient libraries by being able to load from libraries from other languages, 
+    like C.</li>
+  <li>Popular with good programmers when it is ready. What is the point of a good
+    programming language without users? Lang will however not be compromised to protect 
+    users.(Although some libraries might.)</li>
+</ul>
 
-<p>One of the goals of Lang is to have as much as possible either be
- a library, or written in a very library-like manner, modularly. The specification should be
-the same way. As such, i attempt to make Lang able to incorporate other programming 
-methods and concepts via libraries as well.</p>
 
 <h3>Syntax</h3>
-Lang is written in trees like a lisp. However, it is still open alternative 
-ways to produce these trees. But it must always be clear what 
-tree the syntax creates. (See 'Alternative ideas for syntax'.) <!-- TODO link it to end. -->
+Lang is written in trees like any lisp is. However, i am still open to alternative 
+ways to produce these trees.(See 'Alternative ideas for syntax'.) <!-- TODO link it to end. -->
+But it must always be clear what tree the syntax creates.
+
+<h3>Some basic macros</h3>
+<p>For the record, here is how you write some basic stuff like <code>defun</code>.</p>
+<code>(defun [keywords for function] name ([arguments])
+    [body])</code><br>
+<code>(defun [keywords for function] (setf name) ([set-to-argument] [arguments])
+    [body])</code>
+<p>Keywords for defun are things like :specify-as-needed, :inline.
+Arguments name-type pairs, if it is just a symbol, the type is <code>(any)</code></p>
+<code>(struct name ([arguments]) [elements])</code>
+<p>Where elements are either symbols (again, <code>(any)</code>) or name-type pairs
+possibly with keywords after. Like :init, whatever initial value is;
+:arg, the argument keyword with which you create it; :reader :writer :accessor, 
+automatically make reader and/or writer.(All the keywords still todo. <!--TODO-->)
 
 
-<h3>Functional types</h3>
-<p>Functional types are the most important idea in Lang. Structures are written 
+<h3>Types with arguments</h3>
+<p>Types with arguments are the most important idea in Lang. Structures are written 
 as having arguments, which are used for the types of its elements, in which
 the arguments are filled in, with both full types and the arguments the structure
 itself takes. Like this: <code>(struct list-node (item-type)
   (next (ptr (list-node item-type))) (item item-type))</code>
-Of course, you can't make it circularly, but the pointer here prevents it from 
-being so. Also note that you can do stuff like give initial values, keywords for 
-setting at creation, and class derivation with keywords. TODO last sentence</p>
+Of course, you shouldn't make types circularly, but the pointer in this case
+makes the size of the node finite. Also note that you can do stuff like give initial 
+values, keywords for setting at creation, and class derivation with keywords.
+(<!--TODO-->Last statement still idea.)</p>
 
 <p>If you define a structure, any of its more specific types can be created. 
 (I might call more specific finer and more general coarser.) A type is more 
 specific then another type when you can equal the finer one by
  filling an argument. However, there are exceptions, for instance, <code>(any)</code>
 is a type that is always more general, number types are set manually, and there will be
-types like </code>or</code> and </code>eql</code>. Of course, all the deviate types need to be internally 
+types like or and eql. Of course, all the deviate types need to be internally 
 consistent. <!-- TODO make and link to number types, or. -->
 </p>
 
 <h3>Selection based on types</h3>
 <p>Lang uses function overloading, this is also a subset of type inference. For functions,
 it will look into multiple of the same name, and will pick one of the most specific.
-It says one of, there because it might be ambiguous if you only look at the 
+I say 'one of' because which function to choose might be ambiguous if you only look at the 
 specificness. For this reason, Lang has a preference in types, of always seeking the function
 with the most specific rightmost. However, users should try to avoid making this type-preference 
 an issue when actually coding. This means trying to keep down the number of arguments, 
 or making the more specific cases just more efficient versions of the same.</p>
 <p>Note that macros can use type selection as wel, in a way identical to that of functions,
-but only for a fixed ammount of arguments at the beginning.</p>
-<!-- <p>Structure -functions/-macros themselves use type selection for get-slot. 
-Again, the most specific, using the preference, is used.
-TODO idea, implement.
--->
+but only for a fixed ammount of arguments at the beginning. I may do type selection in selection
+of structures too.</p>
 
 <h3>Special qualifier types</h3>
 There are a bunch of special qualifier types. 
@@ -64,30 +97,37 @@ number exactly, and each should have it seperately.</p>
  <code>(eql 1)</code>, <code>(eql 2.4)</code>, <code>(eql 'noodle)</code>.</p>
 <p>If it is an exact number, but unspecified.(Use on functions with flags like :specify-as-used)
 Hou have: <code>(eql (integer n))</code>, <code>(eql (number x))</code>,
-<code>(eql (symbol sym))</code></p>
+<code>(eql (symbol sym))</code> See below.</p>
+
+<h4><code>`(eql (,type-of-eql ,var) ,@clauses)</code></h4>
+A type that matches any of the eql, type-of-eql being integer, number, 
+symbol. For clauses, see clause type. Functions that are this way need something like
+:only-record :specify-as-used. (<!--TODO--> add the keywords automatically?)
 
 <h4><code>(eql* single-argument)</code></h4>
-<p>TODO Same as <code>eql</code>, excepth this one also checks non-eql types for equality. 
+<p>(<!--TODO-->Completely in idea phase)Same as <code>eql</code>, excepth this one also checks non-eql types for equality. 
   This way this can work (Which would stack-overflow with eql.):</p>
 <p><code>(defun factorial ((n (eql* 1))) 1)</code></p>
 <p><code>(defun factorial ((n (integer))) (* n (factorial (- n 1))))</code></p>
 
-<p>Of course, this might be better:</p>
+<p>This might be better: (As long as tail recursion not optimized.)</p>
 <p><code>(defun factorial ((n (integer))) (let1 (m 1) (do-times n (i) (set- * m i))))</code></p>
-<p><code> (do-times 6 (i)
-   (eval `(specialize-fun factorial ((eql ,i)) :inline))) ;;Inline short ones.</code></p>
 
-<h4><code>(or ..bunch..of..types..)</code></h4>
-With this one, the type is one of the arguments of the or. These things come out of
+<h4><code>(clause &rest clauses)</code></h4>
+(<!--TODO-->Completely in idea phase.) Something will only fall into the 
+clause type if all the statements are true. Eql, when the actual thing is still 
+variable can also have clauses.
+
+<h4><code>(or &rest types)</code></h4>
+(<!--TODO-->Completely in the idea phase.)With this one, the type is one of the arguments of the or. These things come out of
 conditional statements, like <code>cond</code>, <code>if</code>, etcetera. For speed it
 might be a good idea to prevent them, or make sure the seperation is done at compile-time.
-TODO make it so.
 
 <h4><code>(function output-type arg-types)</code></h4>
 These types describe functions. Their first argument is the output type of a function.
 
-<h4><code>(function-adapt ,,)</code></h4>
-A function that adapts to the types that are used. <code>(fun-of 'function-symbol)</code>
+<h4><code>(function-adapt symbol)</code></h4>
+(<!--TODO-->untested)A function that adapts to the types that are used. <code>(fun-of 'function-symbol)</code>
 produces a function with type <code>(function-adapth (eql 'function-symbol))</code>, 
 calling it is the same as just calling function-symbol directly.
 
@@ -100,20 +140,26 @@ There will be a bunch of different numbers. Rules are:
   <li>Complex numbers are coarser then real numbers if the type of the real component
 is coarser then the real number one.</li>
 </ul>
-
-TODO Only standard size integers and floating points are done.
+<!--TODO--> Only standard size integers and floating points are currently done.
 
 <h3>Optimalization</h3>
-I am planning to have at least macro-like optimalization. Maybe with typelike matching. 
+<p>I am planning to have at least macro-like optimalization. Maybe with typelike matching. 
 But i am also planning to look at having equivalences and some way of estimating when to
-switch equivalence.
+switch to the 'other side' of the equivalence, or if it ca check through a chain of 
+equivalences to find better ways of computing.</p>
 
-TODO
+<p>Of course, if it can do that, you can also devise a way to make it prove some 
+theorems, automatically, very limitedly, but when a human gives it enough steps, it can 
+verify them all one by one. If we ever get here, a spin off/additional goal for project 
+can be considered. It is at this moment far-off.</p>
 
 <h3>Alternative ideas for syntax</h3>
+Trying to think up syntaxes to write trees is comparatively trivial, compared to the 
+rest of the project. Of course the code to read a tree is completely seperate from the 
+rest of the code.
 <ul>
   <li> Sublisting, ';' starting sublisting and determining how it is, 
-and '|' stopping it: <code>(defun meh (a (int); b (int)) | + a b;)</code> ->
+and '|' stopping it: <code>(defun meh (a (int); b (int)) | + a b;)</code> -&gt;
     <code>(defun meh ((a (int)) (b (int))) (+ a b))</code>
     Requires programmer discretion in use, but looks a lot cleaner when 
 used properly.</li>
@@ -122,9 +168,14 @@ repeat themselves so it is clear 'which hook' is closed.
 <code>[namespace name] .... lots of code ....[/namespace name]</code>
 I would require the user to repeat the exact same thing. Only issue i see 
 with it that people might use it on overly long functions.</li>
-  <li> Other types of hooks. { code } -> (progn code) However, seems silly 
+  <li> Other types of hooks. { code } -&gt; (progn code) However, seems silly 
 just to use it on progn.. Factor (i superficially looked at it) makes its tree with 
 different kinds of objects, also using '{}' to indicate arrays. I am not going to do that, 
-but maybe allow: <code>{..}</code> -> <code>({} ..)</code> and <code>[..]</code> ->
+but maybe allow: <code>{..}</code> -&gt; <code>({} ..)</code> and <code>[..]</code> -&gt;
  <code>([] ..)</code>.</li>.I don't really see the point though...
 </ul>
+
+<a href="http://developer.berlios.de">
+<img src="http://developer.berlios.de/bslogo.php?group_id=10613" width="124" height="32" border="0" alt="BerliOS Logo" /></a> 
+
+</body></html>

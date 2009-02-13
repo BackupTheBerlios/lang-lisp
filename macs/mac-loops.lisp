@@ -54,7 +54,7 @@
 	((< ,var ,count) ,return)
      ,@body))
 
-(mac-add do-times () ((eql (|integer| n)))
+(mac-add do-times () ((|eql| (|integer| n)))
     (count (var &optional return limit-count) &rest body)
   "Does something count times, limit-count determines up to what count the \
 do-times does the operation without loop."
@@ -65,6 +65,5 @@ do-times does the operation without loop."
        ,@body)
     `(progn ;Manually.
        ,@(loop for i from 0 upto (- n 1)
-	    collect `(let ((,var ,i))
-		      ,@body))
+	    collect `(let ((,var (const ,i))) ,@body))
        ,return)))

@@ -20,8 +20,6 @@
 
 (load "test/util.lisp")
 
-(random-tree 0.2 5 5)
-
 ;;TODO make the read/writes to a file in memory instead of hard disk.
 ;; WARNING Some storage isn't meant to write to like this.
 (loop repeat 1000
@@ -32,6 +30,6 @@
 		       :if-exists :supersede :if-does-not-exist :create)
        (format file "~D~%" tree))
      (with-open-file (file "test/test-reader-file" :direction :input)
-       (equalp tree (car(tokenize-stream file :symbol-ize t)))))
+       (equalp tree (car(reader:tokenize-stream file :symbol-ize t)))))
    return (error "One of the written random trees didn't get read back
  correctly."))

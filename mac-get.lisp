@@ -100,6 +100,11 @@ arguments. Use :replace to remove previous macros with this name."))
   `(eval (append (list 'let ,list)
 		 (list ,@body))))
 
+(defmacro let-assoc ((&rest varlist) assoc-list &body body)
+  `(let (,@(loop for var in varlist
+	      collect `(,var (cadr (assoc ',var ,assoc-list)))))
+     ,@body))
+
 (defmacro mac-add (name
     (&key (state '*state*)
 	  (code (gensym)) (actual-types (gensym)) replace (i t))
@@ -114,9 +119,14 @@ arguments. Use :replace to remove previous macros with this name."))
      (lambda (,code &optional ,actual-types)
        (argumentize-list (,@arguments) (cdr ,code)
 	 ,@(if (= 0 (length arg-types))
-	       body
-	       `((let-list (typelist-get-var ',arg-types ,actual-types)
-		   ,@body)))))))
+	     body
+	     (let ((got-vars (typelist-list-var arg-types)))
+	       (if (= 0 (length got-vars))
+		 body
+		 `((let-assoc (,@got-vars)
+		       (print(typelist-get-var '(,@arg-types) ,actual-types
+					 :state ,state))
+		     ,@body)))))))))
 
 (defmacro rawmac-add (name 
     (&key (state '*state*) (state-var 'state) (type-of 'type-of)
@@ -133,8 +143,11 @@ arguments. Use :replace to remove previous macros with this name."))
        (argumentize-list (,@arguments) (cdr ,code)
 	 ,@(if (= 0 (length arg-types))
 	     body
-	     `((let-list (typelist-get-var ',arg-types ,actual-types)
-		,@body)))))))
+	     (let ((got-vars (typelist-list-var arg-types)))
+	       (if (= 0 (length got-vars))
+		 body
+		 `((let-assoc (,@got-vars)
+		       (print(typelist-get-var '(,@arg-types) ,actual-types
+					 :state ,state-var))
+		     ,@body)))))))))
 
-
-    

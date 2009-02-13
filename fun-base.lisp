@@ -21,26 +21,11 @@
 
 (in-package #:lang)
 
-(defun not-found-expression-message (&optional (str-fun #'warn))
-  (lambda (code arguments)
-    (funcall str-fun
-      (format nil "[not-found-expression]Can't find function/macro for the\
- symbol ~D and argument types ~D." (car code)
-        (loop for a in arguments
-	   collect (out-type (if (listp a) (car a) a)))))))
-
-(defun inconsistent-out-types-message (&optional (str-fun #'warn))
-  (lambda (got want)
-    (funcall str-fun
-      (format nil "[inconsistent-out-types]\
-Out-types of existing functions can currently not be changed.\
- If it is not a function, and out-types are not applicable\
- (like macros) out-type should be nil.(making macros via usual way will
- have it that way already.)"))))
-
 (defun initial-convertable (code)
   "Gives types for inside lang to types of common lisp"
-  `(|eql| ,code))
+  (cond
+    ((integerp code) '(|int64|))
+    ((numberp code)  '(|double|))))
 
 ;;State of the function inference
 (defclass fun-state ()
@@ -48,8 +33,7 @@ Out-types of existing functions can currently not be changed.\
    (funs :accessor funs :initform (make-hash-table))
    ;Manual override for generality of functions.
    (manual-type-generality :initarg :manual-type-generality
-    :initform (list(lambda (type compare-type state)
-		     (eql (car type) 'any))))
+    :initform nil)
    ;(raw)Macros. (Getting these individually in mac-get.lisp)
    (macs :accessor macs :initform (make-hash-table))
    
@@ -65,16 +49,20 @@ Out-types of existing functions can currently not be changed.\
  ;The one new stuff should go to. (Use of it is in flet and such.)
    (write-namespace :initform nil)
    
-;Information on how to give errors. (Well, not all.)
-  
-  ;When can not find any (matching) macro/function.
-   (not-found-expression :initarg :not-found-expression
-			 :initform (not-found-expression-message))
-  ;When out-types of something you are changing doesn't match what you \
-  ; declared before.
-;   (inconsistent-out-types :initarg :not-found-expression
-	;		   :initform (inconsistent-out-types-message))))
+ ;Extensions by macros.
+   (extensions :initform nil :initarg extensions :type list)
    ))
+
+(defun add-manual-type-generality (state function)
+  (push function (slot-value state 'manual-type-generality)))
+
+(defun get-extension (state extension-name)
+  (getf (slot-value state 'extensions) extension-name))
+(defun (setf get-extension) (to state extension-name)
+  (setf (getf (slot-value state 'extensions) extension-name ) to))
+
+(defmacro get-extension-slot (state extension-name slot)
+  `(slot-value (get-extension ,state ,extension-name) ,slot))
 
 (defun add-namespace (namespace symbol)
   (intern (format nil "~D-~D" namespace symbol)))

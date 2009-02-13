@@ -21,20 +21,10 @@
 ;;TODO allow for states to be written at the time of the macro 
 ;;creation itself?
 
-;Used in struct.lisp.
-(defclass state-with-types ()
-  ((types :initarg :types :initform (make-hash-table))
-   
-   (pointer-type-size :initarg :pointer-type-size
-		      :initform 16 :type integer)
-   (arbitrary-type-size :initarg :arbitrary-type-size
-			:initform 16 :type integer)))
-
 ;Used in to-c.lisp.
 (defclass state-to-c ()
   ((nondescript-type-preface
     :initform "Obj" :initarg :nondescript-type-preface)))
-
 
 (defvar *initial-args*
   '((list-open (list #\( )) (list-close (list #\) ))
@@ -56,7 +46,7 @@
   ((reader :initform (set-reader))
    (args :initform *initial-args*)))
 
-(defclass default-state (fun-state state-with-types state-to-c reader-state)
+(defclass default-state (fun-state state-to-c reader-state)
   ())
 
 (defvar *state* (make-instance 'default-state))

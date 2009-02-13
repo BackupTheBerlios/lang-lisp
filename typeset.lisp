@@ -45,7 +45,7 @@
        when(funcall more-general-fun type compare-type state)
 	return t)
      t)
-    ((not(listp compare-type))
+    ((or (not(listp compare-type)) (not (listp type)))
      nil)
     ;Numbers, integers, etc. are checked for precise equality.
 ;TODO eql* also checks for variable numbers? (Code for that elsewhere.)
@@ -154,7 +154,9 @@ general enough. DOES NOT resort the thing."
 		    &key (state *state*) (top t) (use-hash t))
   "Gets a function from a list based on the argument types."
   (cond
-    ((and top use-hash (equal (type-of typeset) 'top-typeset))
+    ((and* top use-hash (equal (type-of typeset) 'top-typeset)
+	  (gethash (type-list-spec-string arg-types)
+		   (slot-value typeset 'exact-hash)))
      (gethash (type-list-spec-string arg-types)
 	      (slot-value typeset 'exact-hash)))
     (t

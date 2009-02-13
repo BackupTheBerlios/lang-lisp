@@ -25,6 +25,9 @@
     (t
      (error "quote does not quote anything else then symbols yet."))))
 
+(mac-add const () () (const)
+  (make-instance 'value :type `(|eql| ,const)))
+
 (rawmac-add namespace () () (name &rest body)
   (with-fun-resolve
     (with-slots (namespaces write-namespace) state
@@ -38,11 +41,20 @@
 
 ;;Body-like stuff
 (rawmac-add progn () () (&rest body)
-  (let ((res (loop for c in body
-		collect (fun-resolve c type-of :state state))))
-    `(,(make-instance 'out :name 'progn :code res
-		      :type (out-type(car(last res))))
-       ,@res)))
+  "A function body. All things with function bodies pass through here."
+  (case (length body)
+    (1 (values (car body) :again))
+    (t
+     (setf body (loop for b in body
+		   if (and* (listp b) (case (car b) ((progn |progn|) t)))
+		   append (cdr b)
+		   else
+		   collect b))
+     (let ((res (loop for c in body
+		   collect (fun-resolve c type-of :state state))))
+       `(,(make-instance 'out :name 'progn :code res
+			 :type (out-type(car(last res))))
+       ,@res)))))
 
 (rawmac-add let () () ((&rest varlist) &rest body)
   "Makes variables. Made in sequence."

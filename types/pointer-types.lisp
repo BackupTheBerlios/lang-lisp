@@ -20,7 +20,7 @@
 
 ;;Pointer stuff.
 (add-type '|ptr| ('atomic-type) :size
-	  (slot-value *state* 'pointer-type-size))
+	  (get-extension-slot *state* :types 'pointer-type-size))
 
 (fun-add '|ptr| '(anything) ()
   :doc-str "Pointer to an object."
@@ -44,7 +44,8 @@
   :out-type '(|ptr-integer|) :flags '(:c-binary-fun :chase-args))
 
 ;References are use as if just the argument itself.
-(add-type '|ref| ('atomic-type) :size (slot-value *state* 'pointer-type-size))
+(add-type '|ref| ('atomic-type)
+	  :size (get-extension-slot *state* :types 'pointer-type-size))
 
 (push (lambda (type compare-type state)
 	(cond

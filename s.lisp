@@ -25,9 +25,23 @@
 
 (in-package #:lang)
 
-(summary(fun-resolve '(let1 ((sum 0))
-		       (dotimes 7 (i) (+ i sum))
-		       sum) '()))
+(with-slots (more-specific)
+    (get-symbol 'do-times (slot-value *state* 'macs) *state*)
+  (loop for el in more-specific
+     collect el))
+
+(typeset-get (get-symbol 'do-times (slot-value *state* 'macs) *state*)
+	     '((|eql| 4)))
+
+(slot-value *state* 'manual-type-generality)
+
+(type-coarser '(|eql| (|integer| n)) '(|eql| 2))
+
+(process-code (fun-resolve '(let1 (sum 0)
+			(do-times (const 3) (i) (set sum (+ i sum)))
+			sum) '()) :body-level t)
+
+(summary(fun-resolve '(const 0) '()))
 
 (summary(fun-resolve '(* b a) '((a (|int32|)) (b (|int32|)))))
 (summary(fun-resolve '(defun meh ((x (|int32|))) (* x x)) '()))

@@ -39,23 +39,13 @@
 ;;Number types large enough for eachother are compatible.
 (push (lambda (type compare-type state)
 	(when (and (null (cdr type)) (null (cdr compare-type)))
-	  (case (car type)
-	    (|long-double|
-	     (case (car compare-type)
-	       ((|long-double| |double| |float|
-		 |int64| |int32| |int16| |int8|) t)))
-	    (|double|
-	     (case (car compare-type)
-	       ((|double| |float| |int64| |int32| |int16| |int8|) t)))
-	    (|float|  (case (car compare-type)
-			((|float| |int32| |int16| |int8|) t)))
-	    (|int64|  (case (car compare-type)
-			((|int64| |int32| |int16| |int8|) t)))
-	    (|int32|  (case (car compare-type)
-			((|int32| |int16| |int8|) t)))
-	    (|int16|  (case (car compare-type)
-			((|int16| |int8|) t)))
-	    (|int8|   (case (car compare-type) ((|int8|) t))))))
+	  (let ((types '(|int8| |int16| |int32| |int64| |integer|
+			 |float| |double| |long-double| |number|)))
+	    (loop for tp in types sum 1
+	       when (eql tp (car type))
+	       return nil
+	       when (eql tp (car compare-type))
+	       return t))));(not (eql tp (car type)))))))
 	(slot-value *state* 'manual-type-generality))
 
 ;;Numbers stuff.
@@ -75,15 +65,29 @@
 ;TODO what about just int? Equal it to int64 or int32?
 ;     And unsigned integers?
 ;TODO why are things turning float? (hmm behavior gone..)
-;Note that information _can_ be lost! (int32, int64 -> float)
-(let*((order '((|long-double|) (|double|) (|float|)
-	       (|int64|) (|int32|) (|int16|) (|int8|)))
-      (len (length order)))
-  (loop for i from 0 upto (- len 1) do
-  (loop for j from 0 upto (- len 1) do
-    (dolist (s '(+ - * /))
-      (fun-add s `(,(nth i order) ,(nth j order)) ()
-	       :out-type (nth (min i j) order) :flags '(:c-binary-fun))))))
+;Note that information _can_ be lost! (int32, int64 -> float.
+(let*((def-flt 1) (def-int 1)
+      (reals '((|float|) (|double|) (|long-double|) (|number|)
+	       (|eql| (|number| x))))
+      (ints  '((|integer|) (|int64|) (|int32|) (|int16|) (|int8|)
+	       (|eql| (|integer| n)))))
+  (dolist (s '(+ - * /))
+    (flet ((add (t1 t2 to)
+	     (fun-add s `(,t1 ,t2) ()
+		      :out-type to :flags '(:c-binary-fun))
+	     (fun-add s `(,t2 ,t1) ()
+		      :out-type to :flags '(:c-binary-fun))))
+      (loop for r on reals
+	    for k from 0
+	 if (<= k def-flt)
+	      do (dolist (r2 r) (add r2 (car r) (nth def-flt reals)))
+	 else do (dolist (r2 r) (add r2 (car r) (car r))))
+      (loop for r on ints
+	    for k from 0
+	 if (<= k def-int)
+	      do (dolist (r2 r) (add r2 (car r) (nth def-int ints)))
+	 else do (dolist (r2 r) (add r2 (car r) (car r)))))))
+
 ;And boolean returning ones.
 (let ((numbers
        '((|double|) (|float|) (|int64|) (|int32|) (|int16|) (|int8|))))
