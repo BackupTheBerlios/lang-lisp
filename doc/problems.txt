@@ -1,0 +1,15 @@
+
+Problems:
+
+* The resolve-result needs to have matching out-names, or conversion 
+to the resulting language (by to-c.lisp) won't work. This conflicts with 
+the idea that the optimizer needs to run after resolving, since this way 
+macros can only limitedly be optimized.
+     Solutions:
+       * Resolve allows for other macros, and those other macros will then 
+       be transformed just before conversion to other languages.
+       * Move macro optimizations to pre-resolving. Then they can't use 
+       types as well.
+       * Ignore, only do function optimizations. Don't use macros where
+       higher order functions should be used. Need to implement higher 
+       order functions for that, of course! (Makes sense imo)

@@ -1,13 +1,8 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html><head>
-
-
    <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
    <title>Explanation what lang is to be</title>
 </head><body>
-
-<a href="http://developer.berlios.de">
-<img src="http://developer.berlios.de/bslogo.php?group_id=10613" width="124" height="32" border="0" alt="BerliOS Logo" /></a> 
 
 <p>Note the is due to the early stage of Langs development.</p>
 
@@ -33,9 +28,9 @@ Lang is meant to become:
 
 
 <a name="Syntax"><h3>Syntax</h3></a>
-<p>Lang is written in trees like any lisp is. However, i am still open to alternative 
-ways to produce these trees.(See <a href="#Alternative_ideas_for_syntax">Alternative ideas for syntax</a>.)
-But it must always be clear what tree the syntax creates.</p>
+<p>Lang is written in trees like any lisp is. However, it may use alternative ways to produce them
+See <a href="#Alternative_ideas_for_syntax">Alternative ideas for syntax</a>.
+It must always be clear what tree the syntax creates.</p>
 
 <a name="Defun"><h3>Defun</h3></a>
 <p>For the record, here is how you write some basic stuff like <code>defun</code>.</p>
@@ -162,26 +157,42 @@ can be considered. It is at this moment far-off.</p>
 <a name="Alternative_ideas_for_syntax"><h3>Alternative ideas for syntax</h3></a>
 <p>Trying to think up syntaxes to write trees is comparatively trivial, compared to the 
 rest of the project. Of course the code to read a tree is completely seperate from the 
-rest of the code.</p>
+rest of the code. I am still open to debate on all of them.</p>
 <ul>
   <li> Sublisting, ';' starting sublisting and determining how it is, 
-and '|' stopping it: <code>(defun meh (a (int); b (int)) | + a b;)</code> -&gt;
+    and '|' stopping it: <code>(defun meh (a (int); b (int)) | + a b;)</code> -&gt;
     <code>(defun meh ((a (int)) (b (int))) (+ a b))</code>
     Requires programmer discretion in use, but looks a lot cleaner when 
-used properly.</li>
+    used properly, it is implemented, and i decided to use it.</li>
   <li> XML-like marking, allows the programmer to make long s-expressions
-repeat themselves so it is clear 'which hook' is closed.
-<code>[namespace name] .... lots of code ....[/namespace name]</code>
-I would require the user to repeat the exact same thing. Only issue i see 
-with it that people might use it on overly long functions.</li>
-  <li> Other types of hooks. { code } -&gt; (progn code) However, seems silly 
-just to use it on progn.. Factor (i superficially looked at it) makes its tree with 
-different kinds of objects, also using '{}' to indicate arrays. I am not going to do that, 
-but maybe allow: <code>{..}</code> -&gt; <code>({} ..)</code> and <code>[..]</code> -&gt;
- <code>([] ..)</code>.</li>.I don't really see the point though...
+    repeat themselves so it is clear 'which hook' is closed.
+    <code>[namespace name] .... lots of code ....[/namespace name]</code>
+    I would require the user to repeat the exact same thing. Only issue i see 
+    with it that people might use it on overly long functions.
+    Not so sure about it for that reason.</li>
+  <li> <p>Other types of hooks. { code } -&gt; (progn code) However, seems silly 
+      just to use it on progn.. Factor (i superficially looked at it) makes its tree with 
+      different kinds of objects, also using '{}' to indicate arrays. I am not going to do that, 
+      but maybe allow: <code>{..}</code> -&gt; <code>({} ..)</code> and <code>[..]</code> -&gt;
+      <code>([] ..)</code>.</p>
+    <p>Problem with it is that it is unnatural to write macros using them, distracts from 
+      actually making macros that do the job well by themselves. I say nay.
+  </li>
+  <li> Shorter ways of writing lambdas? Instead of writing
+    <code>(lambda (x y z) (+ (sqr x) (sqr y) (sqr z)))</code> write
+    <code>($l (+ (sqr $1) (sqr $2) (sqr $3)))</code>. There was a 
+    <a href="http://www.lispforum.com/viewtopic.php?f=2&t=147" target="window">discussion</a>.(Not started by me.) 
+    Not really a syntax issue though.
+  </li>
 </ul>
 
-<a href="http://developer.berlios.de">
-<img src="http://developer.berlios.de/bslogo.php?group_id=10613" width="124" height="32" border="0" alt="BerliOS Logo" /></a> 
+<hr />
+<table><tr><td width="80%"></td>
+    <td><big>Hosted by</big></td>
+    <td>
+      <a href="http://developer.berlios.de" target="window">
+	<img src="http://developer.berlios.de/bslogo.php?group_id=10613" width="124" height="32" border="0" alt="BerliOS Logo" /></a> 
+    </td>
+</tr></table>
 
 </body></html>

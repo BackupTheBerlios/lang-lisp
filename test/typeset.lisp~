@@ -63,6 +63,8 @@ It returns the erronous ones, nil if none."
 
 (slot-value (nth 4 (car *err*)) 'arg-types)
 
+(print 'a)
+
 (slot-value (car(slot-value *ts* 'more-specific)) 'more-specific)
 
 (when-with miss (car(simple-test *ts* :maxlen 3 :maxdepth 3))

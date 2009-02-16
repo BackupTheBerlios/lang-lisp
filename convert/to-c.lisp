@@ -107,7 +107,7 @@ variable name."
 				     :body-level body-level)
 		 (push r out)))
 	     out)))
-	 
+    
   (unless (listp code) (setf- list code))
   
   (case (type-of (car code))
@@ -139,7 +139,6 @@ variable name."
 	 (flet
 	   (c-return (process (cadr code))))
 	 (progn
-	   (print 'progn)
 	   (let ((gen  (if body-level "" (gen-c-name state))))
 	   (flet ((process-collected ()
 		    (loop for b in (reverse body-collected)

@@ -18,15 +18,15 @@
 ;;
 
 ;Handy macros.
-(load "other/generic.lisp")
+(load "generic.lisp")
 ;Reading s-expresions from file.
-(load "other/reader.lisp")
+(load "reader.lisp")
 
 (defpackage #:lang
   (:use #:common-lisp #:generic #:reader))
 
 ;Function and macro to get stuff from a list like a macro.
-(load "other/argument-positioner.lisp")
+(load "argument-positioner.lisp")
 
 ;The code that does the processing to an s-expression with the functions and
 ;values entirely specified as objects with arguments and return types.
@@ -54,5 +54,5 @@
 (load "types/pointer-types.lisp")
 
 ;Output.(Uses the macros.
-(load "convert/to-c.lisp")
+(load "to-c.lisp")
 

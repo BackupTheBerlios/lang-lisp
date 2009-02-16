@@ -38,7 +38,6 @@
        do (setf- cdr rest))
     (argumentize-list ((&rest args) &rest body) rest
       (setf args (loop for a in args collect (if (listp a) a `(,a (any)))))
-      (print args)
   ;Explicitly specified out-type.
       (let*((doc-str (when (stringp (car body))
 		       (let ((tmp (car body)))

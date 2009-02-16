@@ -21,7 +21,7 @@
 (load "loader.lisp")
 
 ;Stuff to play with.
-(load "play-test-util.lisp")
+(load "other/play-test-util.lisp")
 
 (in-package #:lang)
 
@@ -42,7 +42,6 @@
 			sum) '()) :body-level t)
 
 (summary(fun-resolve '(const 0) '()))
-
 
 (eval-str (:summary) "progn 50.9")
 
@@ -70,5 +69,8 @@
   (let (a 56 ; b 6) |
     while (a) (sqr b);")
 
+(eval-str (:to-c :body-level t) "progn-raw
+  (let (a 56;) (let (b (ptr a);) (val b)))")
 
-(print 0)
+
+(setf (get-symbol '|ptr| (funs *state*) *state*) nil)

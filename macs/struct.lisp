@@ -81,7 +81,7 @@
   (shift-upto type nil with-el state))
 
 (defmethod size-of (type (with-el list) (state types-state))
-  (print (list :error 'missed-type type)) 1)
+  (error (format nil "missed-type ~D ~D" type with-el)))
 
 (defun shift-upto (struct upto-element with-el state)
   "Calculate shift to the given element."
