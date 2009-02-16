@@ -18,7 +18,7 @@
 ;;
 
 (struct string (len)
-  (is (array1 len (char))))
+  (is (array1 len (char)) :derive))
 
 (defun make-string :inline ((len (integer)))
   (let1 (made (make-struct 'string

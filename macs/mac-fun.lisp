@@ -74,7 +74,7 @@
      (values `(defun ,(intern (format nil "set_~D" (cadr name))) ,@stuff)
 	     :again))
     (t
-     (function-creator :defun (cdr code) type-of :state state))))
+     (function-creator 'defun (cdr code) type-of :state state))))
 
 (rawmac-add set () () (what to)
   (with-fun-resolve

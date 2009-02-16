@@ -12,15 +12,16 @@
 
 <h2>Lang development stages</h2>
 
-<h3>Core development</h3>
+<a named="Core_development"><h3>Core development</h3></a>
 <p>The type system, resolving system, and manner of executing is developped. It is looked
 into whether this core can support programming methods and concepts with libraries. The goal 
-is that the core should do as little as possible, and still be able to optimize, but be able
-to do as much as possible with libraries.</p>
+is that the core should do as little as possible, it should be able to do as much as possible 
+with libraries. Separate from the resolving of the functions(types), it will also need something 
+to optimize.</p>
 <p>I will probably refrain from making optimalization mechanisms at this point, because then
-it will take longer to get into actually useable states.</p>
+it will take longer to get it useable.</p>
 
-<h4>Required milestones</h4>
+<a named="Required_milestones"><h4>Required milestones</h4></a>
 More may still be added.
 <ul>
   <li>All working as should to create any library.</li>
@@ -30,24 +31,26 @@ Must test all the previous things.</li>
   <li>Good unit tests. <a href="unittest-core.html">Here</a> are unit tests to be past.</li>
 </ul>
 
-<h3>Libraries development</h3>
+<a named="Libraries_development"><h3>Libraries development</h3></a>
 <p>Beyond this point, less-then-core libraries, optimalization methods, and possibly
  conversion to more languages are developped. This can be done with more people more easily,
  since the libraries are largely separate.(They may aswel be separate projects.) Of course,
  it might need to be discussed how to keep the style consistent. A list of capabilities that 
 should be in the language before going to the next step.(Again, i might add stuff.)</p>
 
-<h4>Required milestones</h4>
+<a named="Required_milestones"><h4>Required milestones</h4></a>
 <ul>
+  <li>A proper website, with good tutorials and other learning resources.</li>
   <li>Simple or automatic usage of functions and structures from C.</li>
   <li>Connections to many C libraries.</li>
-  <li>A loop, or iterate -like macro (preferably iterate-like)</li>
+  <li>A loop, or <a href="http://common-lisp.net/project/iterate/#about">iterate</a> -like macro
+    (preferably iterate-like)</li>
   <li>Optimalization methods addable via libraries.</li>
   <li>Mathematics and statistical functions, graphing functions.</li>
-  <li>A project to show it off a little.</li>
+  <li>A project to show it off.</li>
 </ul>
 
-<h3>Continued development, and promotion</h3>
+<a named="Continued_development_and_promotion"><h3>Continued development, and promotion</h3></a>
 <p>When enough libraries for good use are developped, promoting the language for actual 
 use can start. Meanwhile, there is no reason to stop making more libraries, improve 
 optimization, and languages to convert to, and of course, fine tuning of existing code.</p>

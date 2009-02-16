@@ -124,8 +124,8 @@ arguments. Use :replace to remove previous macros with this name."))
 	       (if (= 0 (length got-vars))
 		 body
 		 `((let-assoc (,@got-vars)
-		       (print(typelist-get-var '(,@arg-types) ,actual-types
-					 :state ,state))
+		       (typelist-get-var '(,@arg-types) ,actual-types
+					 :state ,state)
 		     ,@body)))))))))
 
 (defmacro rawmac-add (name 
@@ -147,7 +147,7 @@ arguments. Use :replace to remove previous macros with this name."))
 	       (if (= 0 (length got-vars))
 		 body
 		 `((let-assoc (,@got-vars)
-		       (print(typelist-get-var '(,@arg-types) ,actual-types
-					 :state ,state-var))
+		       (typelist-get-var '(,@arg-types) ,actual-types
+					 :state ,state-var)
 		     ,@body)))))))))
 

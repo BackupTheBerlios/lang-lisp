@@ -68,6 +68,9 @@ Returns the tree with the names replaced with function structs, and\
   ;An value/variable.
     ((not (listp code))
      (value-resolve code type-of :state state))
+  ;Already done for some reason, but written as list.
+    ((case (type-of (car code)) ((fun value out) t))
+     code)
   ;Its a (raw)macro.
     ((and (get-symbol (car code) macs state) (not defer-to-fun))
      (let ((macset (get-symbol (car code) macs state)))

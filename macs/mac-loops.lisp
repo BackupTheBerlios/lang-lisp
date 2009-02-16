@@ -25,7 +25,7 @@
   (with-fun-resolve
     `(,(make-instance 'out :name 'while :type '(void))
        ,(resolve cond type-of)
-       ,(resolve `(progn ,@body) type-of))))
+       ,(resolve `(progn-raw ,@body) type-of))))
 
 (mac-add while () () ((cond &optional return) &rest body)
   "Does something while condition true."

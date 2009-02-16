@@ -16,99 +16,157 @@
 ;;  You should have received a copy of the GNU Affero General Public License
 ;;  along with Lang.  If not, see <http://www.gnu.org/licenses/>.
 ;;
-;TODO this is based on pretty old stuff, find a better way to
-;'single-tokenize', replace dos with loops(or iterates) where appropriate.
 
 (defpackage #:reader
   (:use #:common-lisp #:generic)
-  (:export tokenize-stream
-	   strwrap str char-cnt line-cnt
-	   strwrap-str strwrap-char-cnt strwrap-line-cnt))
+  (:export tokenize-str tokenize-stream tokenize-file
+	   tokenlist-make-tree))
 
 (in-package #:reader)
 
-(defun single-tokenize (stream stopchars &optional (startch ""))
-  "Gets the next token, stops at any of the stopchars.
- (Even if nothing is found yet.)"
-  (do ((out "" (format nil "~D~D" out ch)) 
-       (ch startch (read-char stream nil nil)))
-      ((or (in-list stopchars ch) (not ch))
-       (progn (unread-char ch stream) out))))
+(defun get-token (str stopchar &optional must)
+  "Gets a token from a string. Stopchar are characters it stops for, must \
+are characters that must be in there, or it will also stop.
+Returns: the string token, the ending index, the element it stopped at."
+  (if-with i (loop for el across str ;Iterate until ending of symbol.
+		   for i from 0
+		when (or (in-list stopchar el) (and must (not(in-list must el))))
+		return i)
+      (values (subseq str 0 i) i (when (< i (length str)) (aref str i)))
+      (values str (length str) nil)))
 
-(defstruct strwrap
-  str (char-cnt 0 :type integer) (line-cnt 0 :type integer))
+(defun tokenize-str (str &key (wrap (lambda (tok k) tok))
+		          (whitespace (list #\Tab #\Space #\Newline))
+ 		          (comment (list #\#)) except except-prev)
+  "Makes a list with tokens. Wrap takes as second argument the index of \
+the first element"
+  (let ((k 0) out)
+    (flet ((add (tok)
+	     (unless (= (length tok) 0)
+	       (push (funcall wrap tok k) out)))
+	   (forward (n) (setf- + k n)
+		        (setf- subseq str n)))
+      (do ((j 0 (+ j 1))) ;Go word for word, until find comment sign, or end of str.
+	  ((or* (= (length str) 0) (> j 50)
+	     (if-use
+	      (progn
+  	      ;See if this is a preceding exception.
+		(when (in-list except-prev (aref str 0))
+		  (add (format nil "~D" (aref str 0)))
+		  (forward 1))
+   	      ;Iterate until next symbol
+		(multiple-value-bind (tok i ch)
+		    (get-token str nil (append whitespace comment))
+		  (forward i)
+		  (in-list comment ch)))
+	    ;Get token.
+	      (multiple-value-bind (tok i ch)
+		  (get-token str (append comment whitespace except))
+		(add tok)
+		(forward (cond
+			   ((in-list except ch)
+			    (add (format nil "~D" ch))
+			    (+ i 1))
+			   (t
+			    i)))
+		(in-list comment ch))))
+	   t)))
+    (reverse out)))
 
-;And what about comments aswell?
-(defun tokenize-stream (stream &key
-	(list-open (list #\( )) (list-close (list #\) ))
-	(whitespace (list #\Tab #\Newline #\Space)) (comment (list #\#))
-	(except nil) (except-prev-nonsymbol nil) wrap symbol-ize
-	(curchar-cnt 0) (curline-cnt 0))
-  "Tokenizes in tree form, making the elements strings. returns a list \
-with the tokenized tree form, character count at end, line count at end \
-arguments: stream, and keyword arguments:
-* list-open, list-close: lists of what starts and stops sub-list, default \
-  (list #\() (list #\))
-* except: these characters will be listed separately, alone. They need not \
-  be surrounded by whitespace. Defaultly nil
-* wrapper: Function that is used on any strings in the returned. This \
-allows you to add extra information. Default is no wrap, just strings. Used\
- as (funcall wrapper string char-cnt line-cnt)
-TODO character count not correct" ;TODO
-  (let ((out nil) (done nil) (ch (read-char stream nil nil))
-	(char-cnt curchar-cnt) (line-cnt curline-cnt))
-  (flet ((wrap (str)
-	   (let ((sym (if symbol-ize (intern str) str)))
-	     (if wrap
-	       (make-strwrap :str sym :char-cnt char-cnt :line-cnt line-cnt)
-	       sym)))
-	 (tokenize ()
-	   (tokenize-stream stream
-	     :list-open list-open :list-close list-close
- 	     :except except :except-prev-nonsymbol except-prev-nonsymbol
-	     :wrap wrap :symbol-ize symbol-ize
-	     :curchar-cnt char-cnt :curline-cnt line-cnt)))
-;while no done signal and the characters keep coming
-    (do () ((or done (not ch)) (values out char-cnt line-cnt))
-    ;Perhaps this should be cons, but that would collect nils too.
-      (setf- append out
+(defun tokenize-stream (stream
+       &key first-str (wrap (lambda (tok k n) tok))
+            (whitespace (list #\Tab #\Space #\Newline))
+	    (comment (list #\#))
+	    (except nil) (except-prev nil))
+  "Tokenize for a stream."
+  (do ((n 0 (+ n 1))
+       (str (if-use first-str (read-line stream)) (read-line stream))
+       (out nil (append out
+		 (tokenize-str str
+		   :wrap (lambda (tok k) (funcall wrap tok k n))
+		   :whitespace whitespace :comment comment
+		   :except except :except-prev except-prev))))
+      ((null str) out)))
+
+(defun tokenize-file (filename 
+       &key first-str (wrap (lambda (tok k n) tok))
+            (whitespace (list #\Tab #\Space #\Newline))
+	    (comment (list #\#))
+  	    (except nil) (except-prev nil))
+  "Tokenize the stream of the file name."
+  (with-open-file (stream filename :direction :input :if-does-not-exist nil)
+    (when stream
+      (tokenize-stream stream :first-str first-str :wrap wrap
+	    :whitespace whitespace
+	    :comment comment :except except :except-prev except-prev))))
+
+(defun string=-curry (with)
+  (lambda (str) (string= str with)))
+
+(defun tokenlist-make-tree (from
+         &key (list-open (string=-curry "(")) (list-close (string=-curry ")"))
+	    (comment-start (string=-curry ".")) (comment-stop (string=-curry "."))
+	    (sep (string=-curry ";")) (sep-stop (string=-curry "|")))
+  "Raw version. Makes a tree with a list of tokens, but no seperaters \
+seperator-stoppers allowed."
+  (let* (out sep-out is-sep)
+    (flet ((make-tree (list)
+	     (tokenlist-make-tree list
+  	         :list-open list-open :list-close list-close
+	         :comment-start comment-start :comment-stop comment-stop
+  	         :sep sep :sep-stop sep-stop))
+	   (is-sep-first ()
+	     (let ((n 0))
+	       (dolist (el from)
+		 (cond
+		   ((and (= n 0) (funcall sep el))
+		    (return t))
+		   ((and (= n 0) (funcall sep-stop el))
+		    (return nil))
+		   ((funcall list-open el)
+		    (setf- + n 1))
+		   ((funcall list-close el)
+		    (setf- - n 1)
+		    (when (< n 0) (return nil)))))))
+	   (add (token &optional force-normal)
+	     (cond
+	       ((and is-sep (not force-normal))
+		(setf sep-out `(,@sep-out ,token)))
+	       (t
+		(setf out `(,@out ,token))))))
+      (setf is-sep (is-sep-first))
+      (do () ((null from) out)
 	(cond
-       ;Skip whitespace
-	 ((in-list whitespace ch)
-	  nil)
-       ;Skip commented stuff.
-	 ((in-list comment ch)
-	  (do ()
-	      ((when (setf ch (read-char stream nil nil))
-		 (case ch
-		   (#\Newline nil)
-		   (t t)))
-		  nil)))
-       ;Opening and closing sublists.
-         ((in-list list-open ch)
-	  (multiple-value-bind (list n-char-cnt n-line-cnt) (tokenize)
-	    (setf char-cnt n-char-cnt)
-	    (setf line-cnt n-line-cnt)
-	    (list list)))
-         ((in-list list-close ch)
-	  (setf done t) nil)
-       ;Exceptions which are by themselves.
-         ((or (in-list except-prev-nonsymbol ch) (in-list except ch))
-	  (list ch))
-       ;Just gather symbols.
-	 (t
-	  (let*((str
-		 (single-tokenize stream
-		   (append list-open list-close whitespace except comment)
-		   ch))
-		(out (list (wrap str))))
-	    (setf- + char-cnt (length str))
-	    out))))
-     (unless done
-       (setf- + char-cnt 1)
-	 (when (eql ch #\Newline)
-	   (setf char-cnt 0)
-	   (setf- + line-cnt 1))
-	 (setf ch (read-char stream nil nil)))))))
-
-
+        ;Comment starting and stopping.
+	  ((funcall comment-start (car from))
+	   (setf- cdr from)
+	   (do () ((funcall comment-stop (car from)) nil)
+	     (setf- cdr from)
+	     (when (null from) (return out))))
+        ;Openings.
+	  ((funcall list-open (car from))
+	   (multiple-value-bind (result list-left) (make-tree (cdr from))
+	     (setf from list-left)
+	     (add result)))
+        ;Closings end this part of tree.
+	  ((funcall list-close (car from))
+	   (when (and is-sep (not(null sep-out))) (add sep-out t))
+	   (return (values out (cdr from))))
+        ;Separators.
+	  ((funcall sep (car from))
+	   (unless is-sep
+	     (error "is-sep should always be expected."))
+	   (setf- cdr from)
+	   (add sep-out t)
+	   (setf sep-out nil))
+        ;Separator-stoppers.
+	  ((funcall sep-stop (car from))
+	    (when is-sep
+	      (add sep-out)
+	      (setf sep-out nil))
+	    (setf- cdr from)
+	    (setf is-sep (is-sep-first)))
+        ;Regular getting of tokens.
+	  (t
+	   (add (car from))
+	   (setf- cdr from)))))))

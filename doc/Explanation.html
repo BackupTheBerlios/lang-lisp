@@ -11,15 +11,15 @@
 
 <p>Note the is due to the early stage of Langs development.</p>
 
-<h2>What it is/what it wants to be</h2>
+<a name="What_it_is"><h2>What it is/what it wants to be</h2></a>
 
-<p>Lang is meant to become:
+Lang is meant to become:
 <ul>
   <li>A general purpose language, being able to convert to many languages. This is a
     far future goal.</li>
   <li>Different then earlier lisps(and languages) in its type system and how the user
     is capable to interact with it. It uses function overloading for functions and 
-    macros.</li>
+    macros. This should allow it to produce fast binaries via C.</li>
   <li>Modular, as much as possible must either be a library, or written in a very
     library-like manner. The specification should be the same way.</li>
   <li>Flexible, the language needs to be powerful enough to make many programming
@@ -32,12 +32,12 @@
 </ul>
 
 
-<h3>Syntax</h3>
-Lang is written in trees like any lisp is. However, i am still open to alternative 
-ways to produce these trees.(See 'Alternative ideas for syntax'.) <!-- TODO link it to end. -->
-But it must always be clear what tree the syntax creates.
+<a name="Syntax"><h3>Syntax</h3></a>
+<p>Lang is written in trees like any lisp is. However, i am still open to alternative 
+ways to produce these trees.(See <a href="#Alternative_ideas_for_syntax">Alternative ideas for syntax</a>.)
+But it must always be clear what tree the syntax creates.</p>
 
-<h3>Some basic macros</h3>
+<a name="Defun"><h3>Defun</h3></a>
 <p>For the record, here is how you write some basic stuff like <code>defun</code>.</p>
 <code>(defun [keywords for function] name ([arguments])
     [body])</code><br>
@@ -45,19 +45,25 @@ But it must always be clear what tree the syntax creates.
     [body])</code>
 <p>Keywords for defun are things like :specify-as-needed, :inline.
 Arguments name-type pairs, if it is just a symbol, the type is <code>(any)</code></p>
-<code>(struct name ([arguments]) [elements])</code>
-<p>Where elements are either symbols (again, <code>(any)</code>) or name-type pairs
-possibly with keywords after. Like :init, whatever initial value is;
-:arg, the argument keyword with which you create it; :reader :writer :accessor, 
-automatically make reader and/or writer.(All the keywords still todo. <!--TODO-->)
+(See in 'Special qualifier types' what that is.))
 
 
-<h3>Types with arguments</h3>
+<a name="Types_with_argmuments"><h3>Types with arguments</h3></a>
 <p>Types with arguments are the most important idea in Lang. Structures are written 
 as having arguments, which are used for the types of its elements, in which
 the arguments are filled in, with both full types and the arguments the structure
-itself takes. Like this: <code>(struct list-node (item-type)
-  (next (ptr (list-node item-type))) (item item-type))</code>
+itself takes. A structure is written thusly:</p>
+<code>(struct name ([arguments]) [elements])</code>
+<p>Where elements are either symbols (again, of type <code>(any)</code>) or name-type
+pairs possibly with keywords after. Like :init, whatever initial value is;
+:arg, the argument keyword with which you create it; :reader :writer :accessor, 
+automatically make reader and/or writer. But also :derive,(and :pass-on) meaning that
+if no function is found, it tries to find one on this element.(And if it doesn't find 
+it there, it goes to the next one.
+(All the keywords still todo. <!--TODO-->)</p>
+
+<p>And example: <code>(struct list-node (item-type)
+  (next (ptr (list-node item-type))) (item item-type))</code><br>
 Of course, you shouldn't make types circularly, but the pointer in this case
 makes the size of the node finite. Also note that you can do stuff like give initial 
 values, keywords for setting at creation, and class derivation with keywords.
@@ -72,7 +78,7 @@ types like or and eql. Of course, all the deviate types need to be internally
 consistent. <!-- TODO make and link to number types, or. -->
 </p>
 
-<h3>Selection based on types</h3>
+<a name="Selection_based_on_types"><h3>Selection based on types</h3></a>
 <p>Lang uses function overloading, this is also a subset of type inference. For functions,
 it will look into multiple of the same name, and will pick one of the most specific.
 I say 'one of' because which function to choose might be ambiguous if you only look at the 
@@ -84,11 +90,11 @@ or making the more specific cases just more efficient versions of the same.</p>
 but only for a fixed ammount of arguments at the beginning. I may do type selection in selection
 of structures too.</p>
 
-<h3>Special qualifier types</h3>
-There are a bunch of special qualifier types. 
+<a name="Special qualifier types"><h3>Special qualifier types</h3></a>
+<p>There are a bunch of special qualifier types.</p>
 
 <h4><code>(any)</code></h4>
-Just a type that is more general then any of the other types.
+<p>Just a type that is more general then any of the other types.</p>
 
 <h4><code>(eql single-argument)</code></h4>
 <p>This one allows you to specify exactly what an argument is, or that it is some 
@@ -100,9 +106,9 @@ Hou have: <code>(eql (integer n))</code>, <code>(eql (number x))</code>,
 <code>(eql (symbol sym))</code> See below.</p>
 
 <h4><code>`(eql (,type-of-eql ,var) ,@clauses)</code></h4>
-A type that matches any of the eql, type-of-eql being integer, number, 
+<p>A type that matches any of the eql, type-of-eql being integer, number, 
 symbol. For clauses, see clause type. Functions that are this way need something like
-:only-record :specify-as-used. (<!--TODO--> add the keywords automatically?)
+:only-record :specify-as-used. (<!--TODO-->Maybe should add the keywords automatically?)</p>
 
 <h4><code>(eql* single-argument)</code></h4>
 <p>(<!--TODO-->Completely in idea phase)Same as <code>eql</code>, excepth this one also checks non-eql types for equality. 
@@ -114,24 +120,24 @@ symbol. For clauses, see clause type. Functions that are this way need something
 <p><code>(defun factorial ((n (integer))) (let1 (m 1) (do-times n (i) (set- * m i))))</code></p>
 
 <h4><code>(clause &rest clauses)</code></h4>
-(<!--TODO-->Completely in idea phase.) Something will only fall into the 
+<p>(<!--TODO-->Completely in idea phase.) Something will only fall into the 
 clause type if all the statements are true. Eql, when the actual thing is still 
-variable can also have clauses.
+variable can also have clauses.</p>
 
 <h4><code>(or &rest types)</code></h4>
-(<!--TODO-->Completely in the idea phase.)With this one, the type is one of the arguments of the or. These things come out of
+<p>(<!--TODO-->Completely in the idea phase.)With this one, the type is one of the arguments of the or. These things come out of
 conditional statements, like <code>cond</code>, <code>if</code>, etcetera. For speed it
-might be a good idea to prevent them, or make sure the seperation is done at compile-time.
+might be a good idea to prevent them, or make sure the seperation is done at compile-time.</p>
 
 <h4><code>(function output-type arg-types)</code></h4>
-These types describe functions. Their first argument is the output type of a function.
+<p>These types describe functions. Their first argument is the output type of a function.</p>
 
 <h4><code>(function-adapt symbol)</code></h4>
-(<!--TODO-->untested)A function that adapts to the types that are used. <code>(fun-of 'function-symbol)</code>
+<p>(<!--TODO-->untested)A function that adapts to the types that are used. <code>(fun-of 'function-symbol)</code>
 produces a function with type <code>(function-adapth (eql 'function-symbol))</code>, 
-calling it is the same as just calling function-symbol directly.
+calling it is the same as just calling function-symbol directly.</p>
 
-<h3>Number types</h3>
+<a name="Number_types"><h3>Number types</h3></a>
 There will be a bunch of different numbers. Rules are:
 <ul>
   <li>Number most general real number.</li>
@@ -142,7 +148,7 @@ is coarser then the real number one.</li>
 </ul>
 <!--TODO--> Only standard size integers and floating points are currently done.
 
-<h3>Optimalization</h3>
+<a name="Optimalization"><h3>Optimalization</h3></a>
 <p>I am planning to have at least macro-like optimalization. Maybe with typelike matching. 
 But i am also planning to look at having equivalences and some way of estimating when to
 switch to the 'other side' of the equivalence, or if it ca check through a chain of 
@@ -153,10 +159,10 @@ theorems, automatically, very limitedly, but when a human gives it enough steps,
 verify them all one by one. If we ever get here, a spin off/additional goal for project 
 can be considered. It is at this moment far-off.</p>
 
-<h3>Alternative ideas for syntax</h3>
-Trying to think up syntaxes to write trees is comparatively trivial, compared to the 
+<a name="Alternative_ideas_for_syntax"><h3>Alternative ideas for syntax</h3></a>
+<p>Trying to think up syntaxes to write trees is comparatively trivial, compared to the 
 rest of the project. Of course the code to read a tree is completely seperate from the 
-rest of the code.
+rest of the code.</p>
 <ul>
   <li> Sublisting, ';' starting sublisting and determining how it is, 
 and '|' stopping it: <code>(defun meh (a (int); b (int)) | + a b;)</code> -&gt;

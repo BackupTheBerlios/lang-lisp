@@ -8,16 +8,16 @@
 <img src="http://developer.berlios.de/bslogo.php?group_id=10613" width="124" height="32" border="0" alt="BerliOS Logo" /></a> 
 
 <h2>Unit tests for the Core development stage</h2>
-I will only unit test things if the test does not constitute reimplementing it. Also should the
+<p>I will only unit test things if the test does not constitute reimplementing it. Also should the
 tested thing not be too simple. Good things to test are functions of which there is another function
-that should be its inverse, and structures on which there are demands on what its state is like.
+that should be its inverse, and structures on which there are demands on what its state is like.</p>
 
 <h3>Type getting/setting tests</h3>
-After setting a bunch of types, subsequent getting should get things correctly. Should also 
+<p>After setting a bunch of types, subsequent getting should get things correctly. Should also 
 try getting less specific types then exist. It should work regardless of use-hash is on or off.
 Perhaps should also include special types, but this might be inpractical. The resulting state
  of the structure holding the types should forfill its state correctness. 
-Where <b>state correctness</b> is the following:
+Where <b>state correctness</b> is the following:</p>
 
 <ul>
   <li>If you go down the more-specific slot of a typeset, it should always actually be more 
@@ -28,14 +28,14 @@ b should not be prefered over a.</li>
 </ul>
 
 <h4>Current state</h4>
-There is a in test/test-typeset.lisp. The preference check seems to fail, but it may be due 
-to the test rather then the state. It does not miss any types.
+<p>There is a in test/test-typeset.lisp. The preference check seems to fail, but it may be due 
+to the test rather then the state. It does not miss any types.</p>
 
 <h3>Filling/getting variables in structures test</h3>
-I should test the filling and getting variables in structures.(in type-util.lisp) This could go like this:
+<p>I should test the filling and getting variables in structures.(in type-util.lisp) This could go like this:
 Make a random tree, find its variables. Make other random symbols(trees?) for its variables, and fill 
 them into the tree with <code>type-fill</code>. Then with the first tree and the second tree, we 
-should be able to get those exact random symbols back with <code>type-get-var</code>.
+should be able to get those exact random symbols back with <code>type-get-var</code>.</p>
 
 <h4>Current state</h4>
 Have a test that does non-special types. Succeeds. (Do special data too later.)
@@ -47,21 +47,21 @@ always is the return type. Then the lowest type of all the entered variables sho
 returning type of the whole.</p>
 
 <h4>Current state</h4>
-Nothing done on it.
+<p>Nothing done on it.</p>
 
 <h3>Test of reader</h3>
-A test(test/test-reader.lisp) for the reader(reader.lisp) is just to write a random symbol tree, 
-and then read it back, and check if the two are equal.
+<p>A test(test/test-reader.lisp) for the reader(reader.lisp) is just to write a random symbol tree, 
+and then read it back, and check if the two are equal.</p>
 
 <h4>Current state</h4>
-Worked last time i checked, but if i improve the reader code i will have to recheck. Adding some 
-variation(Extra whitespace) to the writer might make the test more complete.
+<p>Worked last time i checked, but if i improve the reader code i will have to recheck. Adding some 
+variation(Extra whitespace) to the writer might make the test more complete.</p>
 
 <h3>Test of argument-postioner.lisp</h3>
-Automatically make arguments, fill them and see if the result matches.
+<p>Automatically make arguments, fill them and see if the result matches.</p>
 
 <h4>Current state</h4>
-Nothing done yet. May consider it unneeded.
+<p>Nothing done yet. May consider it unneeded.</p>
 
 <a href="http://developer.berlios.de">
 <img src="http://developer.berlios.de/bslogo.php?group_id=10613" width="124" height="32" border="0" alt="BerliOS Logo" /></a> 

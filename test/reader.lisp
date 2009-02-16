@@ -20,16 +20,35 @@
 
 (load "test/util.lisp")
 
-;;TODO make the read/writes to a file in memory instead of hard disk.
-;; WARNING Some storage isn't meant to write to like this.
+(defun eql-curry (with)
+  (lambda (sym) (eql sym with)))
+
+;Unit test.
+;;TODO current test passed, expand the test to include sep and sep-stop?
 (loop repeat 1000
    unless
    (let ((tree (random-tree 0.2 3 3 :top t 
 		 :from-symbols (loop repeat 20 collect (gensym)))))
-     (with-open-file (file "test/test-reader-file" :direction :output
-		       :if-exists :supersede :if-does-not-exist :create)
-       (format file "~D~%" tree))
-     (with-open-file (file "test/test-reader-file" :direction :input)
-       (equalp tree (car(reader:tokenize-stream file :symbol-ize t)))))
+     (equalp
+      tree
+      (car(tokenlist-make-tree
+	   (tokenize-str (format nil "~D" tree)
+			 :wrap (lambda (tok k) (intern (string-upcase tok)))
+			 :except (list #\( #\) ))
+	   :list-open (eql-curry '|(|) :list-close (eql-curry '|)|)))))
    return (error "One of the written random trees didn't get read back
  correctly."))
+
+;Playtests.
+(tokenlist-make-tree
+ (tokenize-str "(progn
+ (defun sqr (x (number);) | * x x ;)
+ (defun meh (a (int); b (int)) |
+   + a (* 2 a b);)"
+	       :except (list #\( #\) #\; #\|)))
+
+(tokenlist-make-tree
+ (tokenize-str "(a b  (* x) x 43 1  6)"
+	       :except (list #\( #\) #\; #\|)))
+
+

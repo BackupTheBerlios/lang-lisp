@@ -39,22 +39,24 @@
 	  (setf write-namespace wrote-namespace)
 	  out)))))
 
-;;Body-like stuff
-(rawmac-add progn () () (&rest body)
-  "A function body. All things with function bodies pass through here."
+(mac-add progn () () (&rest body)
   (case (length body)
-    (1 (values (car body) :again))
-    (t
-     (setf body (loop for b in body
-		   if (and* (listp b) (case (car b) ((progn |progn|) t)))
-		   append (cdr b)
-		   else
-		   collect b))
-     (let ((res (loop for c in body
-		   collect (fun-resolve c type-of :state state))))
-       `(,(make-instance 'out :name 'progn :code res
-			 :type (out-type(car(last res))))
-       ,@res)))))
+    (1 (car body))
+    (t `(progn-raw ,@body))))
+    
+;;Body-like stuff
+(rawmac-add progn-raw () () (&rest body)
+  "A function body. All things with function bodies pass through here."
+  (setf body (loop for b in body
+		if (and* (listp b) (case (car b) ((progn |progn|) t)))
+		append (cdr b)
+		else
+		collect b))
+  (let ((res (loop for c in body
+		collect (fun-resolve c type-of :state state))))
+    `(,(make-instance 'out :name 'progn :code res
+		      :type (out-type(car(last res))))
+       ,@res)))
 
 (rawmac-add let () () ((&rest varlist) &rest body)
   "Makes variables. Made in sequence."
@@ -76,10 +78,13 @@
 	  ;Resolve output. (Doesn't have a progn-like thing at its end.)
 	  (out-res  (resolve `(progn ,@body) new-type-of)))
       ;Construct output code.
-      `(,(make-instance 'out :name 'let :code out-res
-			     :type (out-type (car out-res)))
-	 ,var-list
-	 ,out-res))))
+      (if (null var-list)
+	  (progn (warning "Style: only one argument in a res!")
+		 out-res)
+	  `(,(make-instance 'out :name 'let :code out-res
+			    :type (out-type (car out-res)))
+	     ,var-list
+	     ,out-res)))))
 
 (mac-add let1 () () ((var to) &rest body)
   `(let ((,var ,to)) ,@body))

@@ -16,7 +16,7 @@
 ;;  You should have received a copy of the GNU Affero General Public License
 ;;  along with Lang.  If not, see <http://www.gnu.org/licenses/>.
 ;;
- 
+
 ;Lang stuff and base lang libraries.
 (load "loader.lisp")
 
@@ -38,46 +38,37 @@
 (type-coarser '(|eql| (|integer| n)) '(|eql| 2))
 
 (process-code (fun-resolve '(let1 (sum 0)
-			(do-times (const 3) (i) (set sum (+ i sum)))
+			(do-times (const 5xo) (i) (set sum (+ i sum)))
 			sum) '()) :body-level t)
 
 (summary(fun-resolve '(const 0) '()))
 
-(summary(fun-resolve '(* b a) '((a (|int32|)) (b (|int32|)))))
-(summary(fun-resolve '(defun meh ((x (|int32|))) (* x x)) '()))
 
-(summary(fun-resolve '(meh a) '((a (|int32|)))))
+(eval-str (:summary) "progn 50.9")
 
-(process-code(fun-resolve
-	      '(progn(+ a (|bit-or| a b))) '((a (|int32|)) (b (|int32|))))
-	     :body-level t :fun-top t)
+(eval-str (:to-c :body-level t) "progn-raw (let (x 4;) | sqr x;)")
+
+(eval-str (:to-c :body-level t :fun-top t) "progn-raw
+  (let (a 1 ; b 4) |
+    * a b;)")
+
+(eval-str (:to-c :body-level t) "progn-raw
+  (defun meh (a (int64); b (int64)) (+ (* a b) b a))")
+
+(eval-str (:to-c :body-level t) "progn-raw
+  (let (a 3 ; b 6) |
+    + a (bit-or (+ a 6 1) (meh a b));)")
+
+;(with-open-file (stream "miauw" :if-exists :supersede :direction :output)
+;  (format stream
+(eval-str (:to-c :body-level t) "progn-raw
+  (let (a 45 ; b 61) |
+    progn-raw 5 6 2 ;
+    + a (let ((c (sqr (let ((d a)) (+ b d))))) | * c b;);")
+
+(eval-str (:to-c :body-level t) "progn-raw
+  (let (a 56 ; b 6) |
+    while (a) (sqr b);")
 
 
-(summary(fun-resolve '(|sqr| a) '((a (|int64|)))))
-
-(setf (gethash '|sqr| (funs *state*)) nil)
-
-(fun-resolve '(defun |sqr| |:only-record| |:specify-as-used|
-	       (x) (* x x)) '())
-
-(summary (gethash '|sqr| (funs *state*)))
-
-(process-code(fun-resolve
-	 '(progn(+ a (let ((c (|sqr| (let ((d a)) (+ b d))))) (* c b))))
-	 '((a (|int32|)) (b (|int32|)))) :body-level t)
-
-(summary(fun-resolve
-	 '(while (a) (|sqr| (+ a (let ((c b)) c))))
-	 '((a (|int16|)) (b (|int16|))))); :body-level t)
-
-(print 'a)
-
-(summary(named-typeset-get '|sqr| '((|double|)) (funs *state*)
-			   :state *state*) :more-on-fun t)
-
-(type-list-coarser '((|int32|)) '((|int32|)))
-
-(type-list-eql-like '((|int32|)) '((|int32|)))
-
-(summary (cadr(fun-resolve '(defun |sqr| |:specify-as-used| ((X (|double|))) (* X X))
-			   '())))
+(print 0)

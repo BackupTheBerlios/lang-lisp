@@ -17,7 +17,7 @@
 ;;  along with Lang.  If not, see <http://www.gnu.org/licenses/>.
 ;;
 (defpackage #:lang
-  (:use #:common-lisp #:generic))
+  (:use #:common-lisp #:generic #:reader))
 
 (in-package #:lang)
 
