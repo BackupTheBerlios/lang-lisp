@@ -16,6 +16,7 @@
 ;;  You should have received a copy of the GNU Affero General Public License
 ;;  along with Lang.  If not, see <http://www.gnu.org/licenses/>.
 ;;
+
 (in-package #:lang)
 
 (defun type-fill (type with-el)
@@ -35,7 +36,8 @@ type that it actually is."
   (loop for tp in types collect (type-fill tp with-el)))
 
 (defun type-get-var (general specific &key (state *state*) 
-		     (do-types t) (do-eql t) (got-var (list nil)))
+		     (do-types t) (do-eql t) (got-var (list nil))
+		     type-lists)
   "See typelist-get-var."
   (cond
     ((symbolp general)
@@ -46,7 +48,7 @@ type that it actually is."
        (do-types (push (list general specific) (car got-var)))))
     ((not(listp general))
      (error "Erronous type."))
-    ((eql (car general) '|eql|)
+    ((and (not type-lists) (eql (car general) '|eql|))
      (when do-eql
        (argumentize-list ((type var)) (cdr general)
        (argumentize-list (s-eql eql-to) specific
@@ -61,22 +63,18 @@ type that it actually is."
 	   (error "Mismatch of eql, these two types should be the same."))
 	 (push (list var eql-to) (car got-var))))))
     (t
-     (loop for g in (cdr general)
-	   for s in (cdr specific)
+     (loop for g in (if type-lists general  (cdr general))
+	   for s in (if type-lists specific (cdr specific))
        do (type-get-var g s :state state
 	    :do-types do-types :do-eql do-eql :got-var got-var))))
   (car got-var))
 
 (defun typelist-get-var (general specific
-			 &key (state *state*) (do-types t) (do-eql t)
-			 (got-var (list nil)))
+			 &key (state *state*) (do-types t) (do-eql t))
   "Basically the reverse of type-fill, gets the symbol values that are 
 filled in."
-  (loop for g in general
-        for s in specific
-     do (type-get-var g s :state state :do-types do-types :do-eql do-eql
-		      :got-var got-var))
-  (car got-var))
+  (type-get-var general specific :state state
+		:do-types do-types :do-eql do-eql :type-lists t))
 
 (defun type-list-var (type &optional have)
   "gets the variables in a type."
@@ -96,16 +94,3 @@ filled in."
 ;Stuff must match if the out-type is not applicable.
 (defmethod out-type (a-priory)
   nil)
-
-(defmethod out-type ((list list))
-  (let ((got (car list)))
-    (case (type-of got)
-      (fun ;Get the variables in the type.
-       (if (in-list (slot-value got 'flags) :chase-args)
-	 (typelist-fill (out-type got)
-			(typelist-get-var (out-type got)
-					  (loop for arg in (cdr list)
-					     collect (out-type arg))))
-	 (out-type got)))
-      (t ;Take as-is.
-       (out-type got)))))

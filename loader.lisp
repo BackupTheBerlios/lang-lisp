@@ -50,8 +50,8 @@
 ;Macros, functions and types regarding:
 (load "types/any.lisp")
 (load "types/eql.lisp")
-(load "types/number-types.lisp")
-(load "types/pointer-types.lisp")
+(load "types/numbers.lisp")
+(load "types/pointers.lisp")
 
 ;Output.(Uses the macros.
 (load "convert/to-c.lisp")

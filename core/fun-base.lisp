@@ -1,4 +1,4 @@
-;;
+;
 ;;  Copyright (C) 2009-02-07 Jasper den Ouden.
 ;;
 ;;  This file is part of Lang(working title).
@@ -29,19 +29,21 @@
 
 ;;State of the function inference
 (defclass fun-state ()
-  (;Functions. (Getting them individually in fun-get.lisp)
+  (
+ ;Functions. (Getting them individually in fun-get.lisp)
    (funs :accessor funs :initform (make-hash-table))
-   ;Manual override for generality of functions.
-   (manual-type-generality :initarg :manual-type-generality
-    :initform nil)
-   ;(raw)Macros. (Getting these individually in mac-get.lisp)
+ ;Manual override for generality of functions.
+  ;TODO overrides need to be named.
+   (manual-type-coarser :initform nil :type list)
+   (manual-type-coarser-names :initform nil :type list)
+ ;(raw)Macros. (Getting these individually in mac-get.lisp)
    (macs :accessor macs :initform (make-hash-table))
    
-   ;Converts types from stuff like common lisps integers.
+ ;Converts types from stuff like common lisps integers.
    (convert-type :initarg :convert-type
 		 :initform #'initial-convertable)
       
-   ;For generating symbols.
+ ;For generating symbols.
    (gen-str :initform 'gen)
    (gen-cnt :initform 0)
    
@@ -53,8 +55,23 @@
    (extensions :initform nil :initarg extensions :type list)
    ))
 
-(defun add-manual-type-generality (state function)
-  (push function (slot-value state 'manual-type-generality)))
+(defun fun-state-manual-type-coarser (state name)
+  "Gets a manual coarser function."
+  (with-slots (manual-type-coarser manual-type-coarser-names) state
+    (loop for fun in manual-type-coarser
+	  for n in manual-type-coarser-names
+       when (eql n name)
+       return fun)))
+
+(defun (setf fun-state-manual-type-coarser) (function state name)
+  "Sets a manual coarser function."
+  (with-slots (manual-type-coarser manual-type-coarser-names) state
+    (unless (loop for fun in manual-type-coarser
+	          for n in manual-type-coarser-names
+	       when (eql n name)
+	       return (setf fun function))
+      (push function manual-type-coarser)
+      (push name manual-type-coarser-names))))
 
 (defun get-extension (state extension-name)
   (getf (slot-value state 'extensions) extension-name))

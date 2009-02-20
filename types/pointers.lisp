@@ -47,19 +47,15 @@
 (add-type '|ref| ('atomic-type)
 	  :size (get-extension-slot *state* :types 'pointer-type-size))
 
-(push (lambda (type compare-type state)
-	(cond
-	  ((or (not (listp type)) (not (listp compare-type)))
-	   nil)
-	  ((null(cddr type))
-	   (let ((type-ref (eql (car type) '|ref|))
-		 (compare-ref (eql (car compare-type) '|ref|)))
-	     (when (or type-ref compare-ref) ;One of them is reference.
-	       (type-coarser
-		 (if type-ref (cadr type) type)
-		 (if compare-ref (cadr compare-type) compare-type)
-		 :state state))))))
-      (slot-value *state* 'manual-type-generality))
+(setf (fun-state-manual-type-coarser *state* '|ref|)
+      (lambda (type compare-type state)
+	(flet ((reference (tp)
+		 (and* (listp tp) (= 2 (length tp))
+		       (eql (car tp) '|ref|))))
+	  (when (reference compare-type)
+	    (if (reference type)
+		(type-coarser (cadr type) (cadr compare-type) :state state)
+		(type-coarser type (cadr compare-type) :state state))))))
 
 ;Note that it used the typeset; when there are objects that are already 
 ;behind a pointer, but the pointer is never in the users control, you don't
@@ -70,7 +66,7 @@ functions to alter things, and have things not be copies of large \
 structures, but still use types in (non reference)functions as if they \
 weren't references. However, it might be a good idea to stay functional!
 WARNING currently ref does _not_ check if what it refers to still exists!"
-  :out-type '(|ref| anything) :c-name '&)
+  :out-type '(|ref| anything) :c-name '& :flags '(:chase-args))
 
 (fun-add '|ref| '((|ptr| anything)) ()
   :doc-str "Reference to a pointer. The pointer is made to behave like a \

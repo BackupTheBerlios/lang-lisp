@@ -36,8 +36,8 @@
   ((doc-str :initarg :doc-str :initform "")
    (fun  :initarg :fun
 	 :initform (lambda (code type-of &key funs macs rawmacs)
-		     (with-function-resolve
-			 (resolve (cdr code) type-of)))
+		     (declare (ignorable funs macs rawmacs type-of))
+		     (values (cdr code) :again))
 	 :accessor fun)))
 
 (defun mac-get (name arg-types &key macs (state *state*))
@@ -46,8 +46,8 @@
   (when-with got (get-symbol name macs state)
     (with-slots (typeset-arg-cnt item) got
       (case typeset-arg-cnt
-	(0 (unless (= (length arg-types) 0)
-	     (error "(langs fault) Why am i getting argument types?"))
+	(0 (assert (= (length arg-types) 0) ()
+		   "(langs fault) Why am i getting argument types?")
 	   item) ;No argument parts.
 	(t (typeset-get got arg-types :state state))))))
 
@@ -72,8 +72,8 @@ arguments. Use :replace to remove previous macros with this name."))
 	 (with-slots (typeset-arg-cnt item) got
 	   (case typeset-arg-cnt
 	     (0 ;No argument parts. (replacing)
-	      (unless (= (length arg-types) 0)
-		(error "(langs fault) Why am i getting argument types?"))
+	      (assert (= (length arg-types) 0) ()
+		      "(langs fault) Why am i getting argument types?")
 	      (setf item to))
 	     (t ;Got arguments.
 	      (setf (typeset-get got arg-types :state state)
@@ -117,6 +117,7 @@ arguments. Use :replace to remove previous macros with this name."))
 		  "")
      :fun
      (lambda (,code &optional ,actual-types)
+       (declare (ignorable ,code ,actual-types))
        (argumentize-list (,@arguments) (cdr ,code)
 	 ,@(if (= 0 (length arg-types))
 	     body
@@ -140,6 +141,7 @@ arguments. Use :replace to remove previous macros with this name."))
 		  "")
      :fun
      (lambda (,code ,type-of &optional ,actual-types (,state-var ,state))
+       (declare (ignorable ,code ,type-of ,actual-types ,state-var))
        (argumentize-list (,@arguments) (cdr ,code)
 	 ,@(if (= 0 (length arg-types))
 	     body
@@ -149,5 +151,6 @@ arguments. Use :replace to remove previous macros with this name."))
 		 `((let-assoc (,@got-vars)
 		       (typelist-get-var '(,@arg-types) ,actual-types
 					 :state ,state-var)
+		     (declare (ignorable ,@got-vars))
 		     ,@body)))))))))
 

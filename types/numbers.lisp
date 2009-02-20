@@ -37,16 +37,16 @@
 	     :defer-to-fun)))
 
 ;;Number types large enough for eachother are compatible.
-(push (lambda (type compare-type state)
+(setf (fun-state-manual-type-coarser *state* '|number|)
+      (lambda (type compare-type state)
 	(when (and (null (cdr type)) (null (cdr compare-type)))
-	  (let ((types '(|number| |long-double| |double| |float|
-			 |integer| |int64| |int32| |int16| |int8|)))
+	  (let ((types '(|int8| |int16| |int32| |int64| |integer|
+			 |float| |double| |long-double| |number|)))
 	    (loop for tp in types sum 1
 	       when (eql tp (car type))
 	       return nil
 	       when (eql tp (car compare-type))
-	       return (not (eql tp (car type)))))))
-	(slot-value *state* 'manual-type-generality))
+	       return t)))))
 
 ;;Numbers stuff.
 (binary-fun-allow-rest (+ * < > <= >=))
@@ -123,8 +123,7 @@
     (fun-add '~ `(,el) () :out-type el)
     (fun-add '! `(,el) () :out-type el)))
 
-(fun-resolve '(|progn|
-	       ;Synonyms.
+(fun-resolve '(|progn| ;Synonyms.
 	       (|defun| |bit-or|  |:inline| |:only-record| (a b)
 		(|\|| a b))
 	       (|defun| |bit-and| |:inline| |:only-record| (a b)

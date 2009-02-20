@@ -20,7 +20,7 @@
 
 (defvar *ts* (make-instance 'typeset))
 
-(setf (slot-value *state* 'manual-type-generality)
+(setf (slot-value *state* 'manual-type-coarser)
       nil)
 
 (defun simple-test (typeset &key (count 1000)

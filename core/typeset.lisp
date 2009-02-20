@@ -30,7 +30,7 @@
    (arg-types :initarg :arg-types :initform nil :accessor arg-types)))
 
 (defclass top-typeset (typeset)
-  ((exact-hash :initform (make-hash-table :eql 'equalp))))
+  ((exact-hash :initform (make-hash-table :test 'equalp))))
 
 (defun type-coarser (type compare-type &key (state *state*))
   "function-match for a single argument."
@@ -41,8 +41,8 @@
      t)
    ;Can manually manipulate to make things more/less general.
 ;TODO undertested.
-    ((loop for more-general-fun in (slot-value state 'manual-type-generality)
-       when(funcall more-general-fun type compare-type state)
+    ((loop for coarser-fun in (slot-value state 'manual-type-coarser)
+       when(funcall coarser-fun type compare-type state)
 	return t)
      t)
     ((or (not(listp compare-type)) (not (listp type)))
@@ -67,7 +67,7 @@ to form the argument of the function."
 	    unless (type-coarser tp c-tp :state state)
 	    return t))))
 
-(defun typeset-coarser (typeset compare-typeset &key (state *state))
+(defun typeset-coarser (typeset compare-typeset &key (state *state*))
   (type-list-coarser (arg-types typeset) (arg-types compare-typeset)
 		     :state state))
 

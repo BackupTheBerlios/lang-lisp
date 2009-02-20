@@ -16,6 +16,14 @@
 ;;  You should have received a copy of the GNU Affero General Public License
 ;;  along with Lang.  If not, see <http://www.gnu.org/licenses/>.
 ;;
+
+;File notes:
+; In this file lang is converted to C. The code is not too good, especially 
+; process-code is way too long. Things need to be boiled down.
+; Important is that this should not mess with the output itself. Especially
+; when doing (out-type code), something done with code before can mess 
+; things up.
+
 (in-package #:lang)
 
 (defun process-type (type state &key (tab-depth 0) do-auto)
@@ -80,6 +88,8 @@ variable name."
 
 ;NOTE will also need to continuously collect the stuff.
 
+;;TODO horrid code.
+;; Maybe add conversion functions to the macros, and use them.
 (defun process-code (code &key (state *state*) fun-top
 	      (var-precede "") top-level body-level (tab-depth 0) do-auto)
   "Processes code, producing C code."
@@ -126,7 +136,7 @@ variable name."
 	   (format nil "~D(~{~a~^, ~})"
 		   (c-name fun) (process-list args)))))))
     (value ;Convert values encountered.
-     (let ((out-type (out-type (car code))))
+     (let ((out-type (out-type code)))
        (cond
 	 ((and* (listp out-type) (eql (car out-type) '|eql|))
 	  (c-return (format nil "~D" (cadr out-type))))
@@ -153,9 +163,8 @@ variable name."
 				      (setf gen-collected nil)))))
 	     (cond
 	       (fun-top ;Will take the last and make it return there.
-		(unless body-level
-		  (error "Fun-top should imply body-level."))
-		(c-return
+		(assert body-level () "Fun-top should imply body-level.")
+		(c-return ;TODO make fun-top work properly.
 		 (tabbed-body (+ tab-depth 1)
 		   (loop for c on (cdr code) 
 		      append
@@ -186,20 +195,18 @@ variable name."
 	   (let*((gen (if body-level "" (gen-c-name state)))
 		 (new-vars
 		  (loop for v in (second code)
-		     unless (eql (car (out-type(if (listp (cadr v))
-						   (caadr v) (cadr v))))
-				 '|eql|)
+		     unless (eql (car (out-type (cadr v))) '|eql|)
 		     collect
 		       (format nil "~D= ~D"
-		        (process-type-var (out-type (if (listp (cadr v))
-							(caadr v) (cadr v)))
+		        (process-type-var (out-type (cadr v))
 					  (car v) state
 			    :tab-depth tab-depth :do-auto do-auto)
 			(process (cadr v) :var-precede gen :tabd 2))))
 		 (res (third code))
+                ;TODO can we stop peeking? (Might be subtil warning!)
 		 (is-progn (and* (listp res)
 				 (eql (type-of (car res)) 'progn)))
-		 (body ;TODO can we stop peeking? (Might be subtil warning!)
+		 (body
 		  (if is-progn
 		    (process-list (cdr res) :body-level t :tabd 2)
 		    (process res :body-level t :tabd 2))))
@@ -225,8 +232,8 @@ variable name."
 			  (if is-progn (car (last body)) body))
 		    gen-collected)))))))
 	 (while
-	   (unless body-level ;TODO it should be able to do it.
-	     (error "While should not end up in functions."))
+	   (assert body-level () ;TODO it should be able to do it.
+		   "While should not end up in functions.")
 	   (c-return (format nil (format nil "while(~~D)~%~~~DT~~D" tab-depth)
 			     (process (second code))
 			     (process (third code) :body-level t))))
@@ -271,7 +278,7 @@ variable name."
 	 (void-end
 	  (c-return nil))
 	 (t
-	   (error "Didn't recognize macro."))))))))))
+	   (error (format nil "Didn't recognize macro. ~D" code)))))))))))
 
 
 (defun process-fun-raw (fun state &key (tab-depth 0) do-auto
@@ -311,10 +318,11 @@ variable name."
 (defun process-all-same-fun (fun state &key write-to)
   (cons (process-fun fun :state state :write-to write-to)
 	(loop for f in (more-specific fun)
-	   collect (process-all fun state :write-to write-to))))
+	   append (process-all-same-fun fun state :write-to write-to))))
 
 (defun process-all-fun (state &key write-to)
-  (maphash (lambda (key value)
-	     (push (process-all-same-fun value state :write-to write-to)
-		   result-list))
-	   (funs state)))
+  (let (result-list)
+    (maphash (lambda (key value)
+	       (push (process-all-same-fun value state :write-to write-to)
+		     result-list))
+	     (funs state))))

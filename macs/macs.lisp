@@ -71,22 +71,20 @@
 	  (new-type-of ;Add some types.
 	    (append
 	     (loop for el in var-list
-		collect (list (car el)
-			      (out-type (if (listp (cadr el))
-					    (caadr el) (cadr el)))))
+		collect (list (car el) (out-type (cadr el))))
 	     type-of))
 	  ;Resolve output. (Doesn't have a progn-like thing at its end.)
 	  (out-res  (resolve `(progn ,@body) new-type-of)))
       ;Construct output code.
       (if (null var-list)
-	  (progn (warning "Style: only one argument in a res!")
-		 out-res)
+	  out-res 
 	  `(,(make-instance 'out :name 'let :code out-res
-			    :type (out-type (car out-res)))
+			    :type (out-type out-res))
 	     ,var-list
 	     ,out-res)))))
 
 (mac-add let1 () () ((var to) &rest body)
+  "Make single variable."
   `(let ((,var ,to)) ,@body))
 
 

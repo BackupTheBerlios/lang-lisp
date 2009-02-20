@@ -75,11 +75,13 @@ Nil if it doesn't recognize it."
 	 (tokenlist-make-tree
 	  (tokenize-str str
 	    :wrap (lambda (tok k)
+		    (declare (ignorable k))
 		    (if-use (parse-number tok) (intern tok)))
 	    :except (list #\( #\) #\; #\|))
 	  :list-open (eql-curry '|(|) :list-close (eql-curry '|)|)
 	  :sep (eql-curry '|;|) :sep-stop (eql-curry '|\||)
-	  :comment-start (eql-curry '|/*|) :comment-stop (eql-curry '|*/|)))
+	  :comment-start (eql-curry '|/*|) :comment-stop (eql-curry '|*/|)
+	  :next-lister (eql-curry '|'|)))
 	(res (case type
 	       (:tokenize nil)
 	       (t (fun-resolve tree vars :state state)))))

@@ -86,7 +86,8 @@
 (defun shift-upto (struct upto-element with-el state)
   "Calculate shift to the given element."
   (declare (type struct-type struct) (type list with-el))
-  (argumentize-list (name (&rest arg) &rest el) (cdr (code struct))
+  (argumentize-list (name (&rest args) &rest el) (cdr (code struct))
+    (declare (ignorable name args))
     (let (found-el)
       (values (loop for el in el
 		 when (eql (car el) upto-element)
@@ -106,8 +107,7 @@
   "Macro returning the code and type getting the slot that is wanted."
   (with-slots (types) (get-extension state :types)
   (let*((obj-res (fun-resolve obj type-of :state state))
-	(type    (out-type obj-res))
-	slot-type)
+	(type    (out-type obj-res)))
     (cond
     ;Don't know the type, need to learn it at run-time.
       ((symbolp type)
@@ -140,6 +140,7 @@ Asked for slot ~D in struct ~D." slot-name (car type))))))))
 
 (rawmac-add size-of () (anything) (obj)
   "Size of an type. (Without extra pointer indirection.)"
+  (declare (ignorable anything))
   (let*((type (out-type(fun-resolve obj type-of :state state)))
 	(typespec
 	 (case (type-of  type)
@@ -154,9 +155,7 @@ Asked for slot ~D in struct ~D." slot-name (car type))))))))
 
 (rawmac-add struct (:code code) () (name)
   "Struct creation macro."
-  (argumentize-list (name) (cdr code)
-    (setf (gethash name (get-extension-slot state :types 'types))
-	  (make-instance 'struct-type :name name :code code))
-    (list(make-instance 'out :name 'struct :type '(:structspec)
-			:code code))))
-
+  (setf (gethash name (get-extension-slot state :types 'types))
+	(make-instance 'struct-type :name name :code code))
+  (list(make-instance 'out :name 'struct :type '(:structspec)
+		      :code code)))

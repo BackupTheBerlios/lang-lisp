@@ -20,7 +20,7 @@
 ;Lang stuff and base lang libraries.
 (load "loader.lisp")
 
-;Stuff to play with.
+;Stuff to play with. 
 (load "other/play-test-util.lisp")
 
 (in-package #:lang)
@@ -31,21 +31,14 @@
      collect el))
 
 (typeset-get (get-symbol 'do-times (slot-value *state* 'macs) *state*)
-	     '((|eql| 4)))
+	     '((|integer|)))
 
-(slot-value *state* 'manual-type-generality)
+(type-coarser '(|any|) '(|int64|))
 
-(type-coarser '(|eql| (|integer| n)) '(|eql| 2))
+(eval-str (:to-c) "progn 50.9")
 
-(process-code (fun-resolve '(let1 (sum 0)
-			(do-times (const 5xo) (i) (set sum (+ i sum)))
-			sum) '()) :body-level t)
-
-(summary(fun-resolve '(const 0) '()))
-
-(eval-str (:summary) "progn 50.9")
-
-(eval-str (:to-c :body-level t) "progn-raw (let (x 4;) | sqr x;)")
+(eval-str (:to-c :body-level t) "progn-raw
+  (do-times (const 3) (i) i)")
 
 (eval-str (:to-c :body-level t :fun-top t) "progn-raw
   (let (a 1 ; b 4) |
@@ -67,10 +60,19 @@
 
 (eval-str (:to-c :body-level t) "progn-raw
   (let (a 56 ; b 6) |
-    while (a) (sqr b);")
+    while (a) (sqr b);
+    |a")
+
+(eval-str (:tokenize) "")
 
 (eval-str (:to-c :body-level t) "progn-raw
-  (let (a 56;) (let (b (ptr a);) (val b)))")
+  (let (a 56;) (let (b (ref a);) (+ a b)))")
+
+(eval-str (:to-c :body-level t :vars '((|a| (|ptr| (|int64|)))))
+  "progn-raw (val a)")
+
+(print 'a)
+(setf (get-symbol '|ref| (funs *state*) *state*) nil)
 
 
-(setf (get-symbol '|ptr| (funs *state*) *state*) nil)
+(typelist-get-var '(any) '((ptr (int))))

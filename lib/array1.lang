@@ -17,23 +17,23 @@
 ;;  along with Lang.  If not, see <http://www.gnu.org/licenses/>.
 ;;
 
-(struct array1 (len-cntr item-tp)
-  (len len-cntr) (items (ptr item-tp)))
+(struct array1 (len-cntr item-tp) |
+  len len-cntr;
+  items (ptr item-tp);)
 
-(defun aref ((index (integer))
-              (array (array1 (integer) item-tp)))
-  (val-of (ptr-shift (get-slot 'len array) index)))
+(defun aref (index (integer); array (array1 (integer) item-tp)) |
+  val-of (ptr-shift (get-slot 'len array) index);)
 
-(defun (set aref) ((set-to item-tp) (index (integer))
-       	           (array (array1 (integer) item-tp)))
-  (set (val-of (ptr-shift (get-slot 'len array) index)) set-to))
+(defun (set aref) (set-to item-tp; index (integer);
+       	           array (array1 (integer) item-tp)) |
+ set (val-of (ptr-shift (get-slot 'len array) index)) set-to;)
 
-(defun make-array1 :inline ((length (integer)) (type (type)))
-  (make-struct 'array1 :len  length
-  	  :items (malloc (* (size-of type) length))))
+(defun make-array1 :inline (length (integer); type (type)) |
+  make-struct 'array1 :len  length
+  	      :items (malloc (* (size-of type) length));)
 
-(defun make-array1 :inline ((length (eql (integer len))) type)
-  (make-struct 'array1 :len  length))
+(defun make-array1 :inline (length (eql (integer len));
+  (make-struct 'array1 :len length))
 
 (defun make-index-sequence :inline ((len (integer))
                                     (seq-tp (array1 (integer) item)))

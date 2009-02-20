@@ -34,12 +34,12 @@
 (defun set-reader (&optional (to-args *initial-args*))
   "Reads a file by chaining the tokenizer and resolver."
   (lambda (state type-of stream)
-    (flet ((get (sym) (copy-list (cadr(assoc sym to-args)))))
+    (flet ((get-sym (sym) (copy-list (cadr(assoc sym to-args)))))
       (fun-resolve 
        (tokenize-stream stream
-	 :list-open (get 'list-open) :list-close (get 'list-close)
-	 :whitespace (get 'whitespace) :except (get 'except)
-	 :except-prev-nonsymbol (get 'except-prev-nonsymbol))
+	 :list-open (get-sym 'list-open) :list-close (get-sym 'list-close)
+	 :whitespace (get-sym 'whitespace) :except (get-sym 'except)
+	 :except-prev-nonsymbol (get-sym 'except-prev-nonsymbol))
        type-of :state state))))
 
 (defclass reader-state ()

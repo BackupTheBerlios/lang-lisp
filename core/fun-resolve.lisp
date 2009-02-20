@@ -51,6 +51,20 @@
 	       (cadr (if-use a (assoc code type-of)))))
 	    (t (funcall (slot-value state 'convert-type) code)))))
 
+(defmethod out-type ((list list))
+  (argumentize-list (obj &rest args) list
+    (case (type-of obj)
+      (fun
+       (if (in-list (slot-value obj 'flags) :chase-args)
+	  (type-fill (slot-value obj 'out-type)
+	    (typelist-get-var (slot-value obj 'arg-types)
+			      (loop for arg in args
+				 collect (out-type arg))))
+	  (out-type obj)))
+      (t
+       (out-type obj)))))
+
+
 (defun fun-resolve (code type-of &key (state *state*) defer-to-fun)
   "Resolves the functions of the code. (Function inference instead of type\
  inference.)
@@ -74,8 +88,7 @@ Returns the tree with the names replaced with function structs, and\
   ;Its a (raw)macro.
     ((and (get-symbol (car code) macs state) (not defer-to-fun))
      (let ((macset (get-symbol (car code) macs state)))
-       (unless macset
-	 (error "Could not find macro of this name."))
+       (assert macset () "Could not find macro of this name." (car code))
        (with-slots (typeset-arg-cnt item) macset
 	 (let*(arg-types
 	       (mac
@@ -138,15 +151,16 @@ Returns the tree with the names replaced with function structs, and\
 	   (setf fun (make-instance 'out :name :type-not-found :code code))
 	   (cons fun arguments)))))))))
 
-(defun count-var-dependencies (res &key (so-far (list nil)))
+;Not at all tested.
+(defun count-var-dependencies (res &optional so-far)
   "Determines what variables res depends on, and how many times."
-  (dolist (el res)
-    (cond
-      ((listp el)
-       (get-var-dependencies el exclude-args
-			     :only-args only-args :so-far so-far))
-      ((eql (type-of el) 'value)
-       (if-with got (assoc (from el) (car so-far))
-	 (setf- + (cadr got) 1)
-	 (push (list (from el) 1) (car so-far))))))
-  (car so-far))
+  (cond
+    ((listp res) ;Should be tail recursive.
+     (count-var-dependencies
+      (cdr res)
+      (count-var-dependencies (car res) so-far)))
+    ((eql (type-of res) 'value)
+     (if-with got (assoc (from res) so-far)
+       (progn (setf- + (cadr got) 1)
+	      so-far)
+       (cons (list (from res) 1) so-far)))))

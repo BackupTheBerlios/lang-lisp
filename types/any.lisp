@@ -19,7 +19,8 @@
 
 (in-package #:lang)
 
-(add-manual-type-generality *state*
-  (lambda (type compare-type state)
-    (when (listp type)
-      (eql (car type) '|any|))))
+(setf (fun-state-manual-type-coarser *state* '|any|)
+      (lambda (type compare-type state)
+	(declare (ignorable compare-type state))
+	(when (listp type)
+	  (eql (car type) '|any|))))

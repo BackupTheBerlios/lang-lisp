@@ -104,10 +104,11 @@ specialized to fit the argument types. (Produces error if it doesnt exist.)"
   `(c-defun ,name (,@args)
 	    ,@(slot-value (fun-get (car code)
 				   (loop for a in args collect (car a))
-				   :state state))
-	    'full-code))
+				   :state state)
+			  'full-code)))
 
 (rawmac-add lambda (:code code) () (name (&rest args) &rest body)
+  (declare (ignorable name args body))
   (function-creator 'lambda code type-of :state state))
 
 ;Fun-of: getting the function of a symbol.

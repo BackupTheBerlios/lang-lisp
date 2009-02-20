@@ -59,6 +59,7 @@
   "Does something count times, limit-count determines up to what count the \
 do-times does the operation without loop."
   ;Default limit-count completely arbitrary.
+  (declare (ignorable count))
   (if (> n (if-use limit-count 4))
     `(do1 (,var 0 (+ ,var 1))
 	  ((< ,var ,n) ,return)
