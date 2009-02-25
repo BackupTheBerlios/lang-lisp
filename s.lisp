@@ -33,7 +33,7 @@
   (do-times (const 3) (i) i)")
 
 ;TODO this shows that namespace not properly implemented yet.
-(eval-str (:summary :body-level t :fun-top t) "namespace lala
+(eval-str (:to-c :body-level t :fun-top t) "namespace lala
   (let (a 1 ; b 4) |
     * a b;)")
 

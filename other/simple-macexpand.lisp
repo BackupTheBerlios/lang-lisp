@@ -1,3 +1,4 @@
+
 ;;
 ;;  Copyright (C) 2009-02-07 Jasper den Ouden.
 ;;
@@ -18,7 +19,8 @@
 ;;
 
 (defpackage #:simple-macexpand
-  (:use #:common-lisp #:generic #:namespace))
+  (:use #:common-lisp #:generic #:namespace)
+  (:export state *state* add-mac-fun add-mac resolve))
 
 (in-package #:simple-macexpand)
 
@@ -37,12 +39,12 @@
 	   &body body)
   "Adds a macro. Add your arguments in args, set code-var and state-var if 
 you want to use them manually."
-  (print`(let ((,state-var ,state))
+  `(let ((,state-var ,state))
      (add-mac-fun ,name
        (lambda (,code-var ,state-var)
-	 (generic:argumentize-list (,@arguments) (cdr ,code-var)
+	 (argumentize-list (,@arguments) (cdr ,code-var)
 	   ,@body))
-       :state ,state))))
+       :state ,state)))
 
 (defun resolve (code &key (state *state*))
   "Resolves all the macros."
@@ -54,14 +56,16 @@ you want to use them manually."
        code)
       (t
        ;Macroexpand until there is no more.
-       (do ((mac-fun (get-symbol (car code) macs state)
-		     (get-symbol (car code) macs state)))
-	   ((null mac-fun) t)
-	 (multiple-value-bind (new-code message)
-	     (funcall mac-fun code state)
-	   (setf code new-code)
-	   (case message
-	     (:stop (return)))))
-       ;Do lower levels and return it.
-       (cons (car code) (loop for c in (cdr code)
-			  collect (resolve c :state state)))))))
+       (if (do ((mac-fun (get-symbol (car code) macs state)
+			 (get-symbol (car code) macs state)))
+	       ((null mac-fun) t)
+	     (multiple-value-bind (new-code message)
+		 (funcall mac-fun code state)
+	       (setf code new-code)
+	       (case message
+		 (:stop (return t))
+		 (:full-stop (return nil)))))
+         ;Do lower levels and return it.
+	   (cons (car code) (loop for c in (cdr code)
+			       collect (resolve c :state state)))
+	   code)))))

@@ -19,7 +19,8 @@
 
 (defpackage #:xml-out
   (:use #:common-lisp #:generic)
-  (:export produce-xml-fun produce-xml-stream produce-xml-file
+  (:export produce-xml-fun produce-xml-string
+	   produce-xml-stream produce-xml-file
 	   attr no-close))
 
 (in-package #:xml-out)
@@ -40,7 +41,7 @@ will look for in lists in the second element to add attributes."
       ((not (listp code)) ;Just lone objects.
        (add-str (if (stringp code) (format nil "\"~D\"" code) code)))
       (t
-       (let ((name (car code)))
+       (let ((name (format nil "~D" (car code))))
 	 (cond
 	   ((let ((second (second code)))
 	      (when (and second (listp second)) ;There are attributes
@@ -71,23 +72,27 @@ will look for in lists in the second element to add attributes."
 			   (attribute 'attr) (no-close 'no-close))
   "Does what produce-xml-fun does, fills in the produce-fun to make it \
 write to stream."
-  (let ((cur-len 0))
+  (let ((cur-len 0) (out-str ""))
     (produce-xml-fun code
        (lambda (code level)
-	 (cond
-	   ((eql code #\Newline) ;These can make newlines manually.
-	    (setf cur-len 0)
-	    (format stream "~%~D" (format nil "~~~DT" level)))
-	   (t
-	    (let ((str (format nil " ~D" code))) ;Keep count of line length.
-	      (setf- + cur-len (length str))
-	      (cond ;Too-much => next line.
-		((when line-length (> cur-len line-length))
-		 (setf cur-len (+ (* tab-level tab-size) (length str)))
-		 (format stream "~%~D~D" (format nil "~~~DT" level) str))
-		(t ;No line checking or enough, just write.
-		 (format stream str))))))
-       :attribute attribute :no-close no-close))))
+	 (when-with got
+	     (cond
+	       ((eql code #\Newline) ;These can make newlines manually.
+		(setf cur-len 0)
+		(format stream "~%~D" (format nil "~~~DT" level)))
+	       (t
+		(let ((str (format nil " ~D" code))) ;Keep count of line length.
+		  (setf- + cur-len (length str))
+		 (cond ;Too-much => next line.
+		   ((when line-length (> cur-len line-length))
+		    (setf cur-len (+ (* tab-level tab-size) (length str)))
+		    (format stream "~%~D~D" (format nil "~~~DT" level) str))
+		   (t ;No line checking or enough, just write.
+		    (format stream str))))))
+	   (when (stringp got)
+	     (setf out-str (concatenate 'string out-str got)))))
+       :attribute attribute :no-close no-close)
+    out-str))
 
 (defun produce-xml-file (code file-name &key (level 0)
            (if-does-not-exist :create) (if-exists :supercede)
@@ -99,3 +104,10 @@ write to stream."
     (produce-xml-file code stream :level level
        :attribute attribute :no-close no-close
        :tab-size tab-size :line-length line-length)))
+
+(defun produce-xml-string (code &key (level 0)
+			   (tab-size 2) line-length
+			   (attribute 'attr) (no-close 'no-close))
+  (produce-xml-file code nil :level level
+		    :attribute attribute :no-close no-close
+		    :tab-size tab-size :line-length line-length))
