@@ -41,6 +41,9 @@
   (and (type-list-coarser tl1 tl2 :state state)
        (type-list-coarser tl2 tl1 :state state)))
 
+;The reason this function is more complicated then just a wrapper round 
+;named-typeset-get is that it also handles functions that are to be 
+;specified as used. TODO move that to resolve?
 (defun fun-get (name arg-types
 		     &key funs (state *state*))
   "Gets the function."
@@ -92,4 +95,36 @@ Warning: arg types of the added function must be correct!"
 		:arg-types ,the-args
 		,@rest)))))
 
+;;Conversion.
 
+(defun conv-get (arg-types &key (state *state*))
+  "Gets the conversion"
+  (unless (= (length arg-types) 2)
+    (error "Conversion functions don't come with two arguments."))
+  (argumentize-list ((conv-type first) second) arg-types
+    (when-with got (gethash conv-type (slot-value state 'conversion))
+      (typeset-get got `(,first ,second) :state state))))
+
+(defun (setf conv-get) (to arg-types &key (state *state*))
+  "Sets the conversion"
+  (unless (= (length arg-types) 2)
+    (error "Conversion functions may only have two arguments."))
+  (with-slots (conversion) state
+    (argumentize-list ((conv-type first) second) arg-types
+      (if (gethash conv-type conversion)
+	  (setf (typeset-get (gethash conv-type conversion)
+			     `(,first ,second) :state state)
+		to)
+	  (setf (gethash conv-type conversion) to))))) 
+      
+
+(defmacro conv-add (name arg-types (&key (state '*state*)) &rest rest)
+  "Makes a conversion function."
+  (with-gensyms (the-args state-var)
+    `(let*((,state-var ,state)
+	   (,the-args ,arg-types) (,state-var ,state))
+       (setf (conv-get ,the-args :state ,state-var)
+	     (make-instance 'fun
+		:name (namespace-symbol ,name ,state-var)
+		:arg-types ,the-args :out-type (cadr ,the-args)
+		,@rest)))))

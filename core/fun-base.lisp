@@ -1,4 +1,4 @@
-;
+;;
 ;;  Copyright (C) 2009-02-07 Jasper den Ouden.
 ;;
 ;;  This file is part of Lang(working title).
@@ -16,8 +16,6 @@
 ;;  You should have received a copy of the GNU Affero General Public License
 ;;  along with Lang.  If not, see <http://www.gnu.org/licenses/>.
 ;;
-(defpackage #:lang
-  (:use #:common-lisp #:generic #:reader))
 
 (in-package #:lang)
 
@@ -28,7 +26,7 @@
     ((numberp code)  '(|double|))))
 
 ;;State of the function inference
-(defclass fun-state ()
+(defclass fun-state (namespace-state)
   (
  ;Functions. (Getting them individually in fun-get.lisp)
    (funs :accessor funs :initform (make-hash-table))
@@ -36,6 +34,10 @@
   ;TODO overrides need to be named.
    (manual-type-coarser :initform nil :type list)
    (manual-type-coarser-names :initform nil :type list)
+   
+ ;Conversion-funs. Take two arguments, from, to.
+   (conversion :initform (make-hash-table))
+
  ;(raw)Macros. (Getting these individually in mac-get.lisp)
    (macs :accessor macs :initform (make-hash-table))
    
@@ -43,14 +45,6 @@
    (convert-type :initarg :convert-type
 		 :initform #'initial-convertable)
       
- ;For generating symbols.
-   (gen-str :initform 'gen)
-   (gen-cnt :initform 0)
-   
-   (namespaces :initform nil)
- ;The one new stuff should go to. (Use of it is in flet and such.)
-   (write-namespace :initform nil)
-   
  ;Extensions by macros.
    (extensions :initform nil :initarg extensions :type list)
    ))
@@ -66,12 +60,13 @@
 (defun (setf fun-state-manual-type-coarser) (function state name)
   "Sets a manual coarser function."
   (with-slots (manual-type-coarser manual-type-coarser-names) state
-    (unless (loop for fun in manual-type-coarser
-	          for n in manual-type-coarser-names
+    (if-use (loop for i from 0
+	           for n in manual-type-coarser-names
 	       when (eql n name)
-	       return (setf fun function))
-      (push function manual-type-coarser)
-      (push name manual-type-coarser-names))))
+	       return (setf (nth i manual-type-coarser) function))
+      (progn
+	(push function manual-type-coarser)
+	(push name manual-type-coarser-names)))))
 
 (defun get-extension (state extension-name)
   (getf (slot-value state 'extensions) extension-name))
@@ -81,28 +76,3 @@
 (defmacro get-extension-slot (state extension-name slot)
   `(slot-value (get-extension ,state ,extension-name) ,slot))
 
-(defun add-namespace (namespace symbol)
-  (intern (format nil "~D-~D" namespace symbol)))
-
-;;Some base functions and stuff.
-(defun namespace-symbol (symbol state)
-  "Adds current namespace to symbol."
-  (with-slots (write-namespace) state
-    (if (null write-namespace)
-	symbol (add-namespace write-namespace symbol))))
-
-(defun get-symbol (symbol from state)
-  (let (got)
-    (loop for namespace in (slot-value state 'namespaces)
-       until (setf got (gethash (add-namespace namespace symbol) from)))
-    (if-use got (gethash symbol from))))
-
-(defun (setf get-symbol) (to symbol from state)
-  (setf (gethash (namespace-symbol symbol state) from) to))
-(defun gen-c-name (state)
-"Generates a name symbol."
-;(NOTE if this doesnt play well with hash table, do something about it.)
-  (with-slots (namespaces gen-str gen-cnt) state
-    (setf- + gen-cnt 1)
-    (intern(format nil "~D~D~D" (if-use (car namespaces) "")
-		                gen-str gen-cnt))))

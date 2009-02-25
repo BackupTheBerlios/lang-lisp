@@ -39,18 +39,6 @@
    (out-type  :initarg :type :initform nil :accessor out-type)
    (data      :initarg :data :initform nil :accessor data)))
 
-(defun value-resolve (code type-of &key state)
-  "Resolves the type of a value."
-  (make-instance 'value :from code
-    :type (cond
-	    ((symbolp code)
-	     (let (a) ;Get symbol, scan the namespaces.
-	       (loop for namespace in (slot-value state 'namespaces)
-		 until (setf a (assoc (add-namespace namespace code)
-				      type-of)))
-	       (cadr (if-use a (assoc code type-of)))))
-	    (t (funcall (slot-value state 'convert-type) code)))))
-
 (defmethod out-type ((list list))
   (argumentize-list (obj &rest args) list
     (case (type-of obj)
@@ -64,13 +52,22 @@
       (t
        (out-type obj)))))
 
+(defun value-resolve (code type-of &key state)
+  "Resolves the type of a value."
+  (multiple-value-bind (type from)
+      (cond
+	((symbolp code) ;Get symbol, scan the namespaces.
+	 (get-symbol-assoc code (list type-of) state))
+	(t
+	 (values (funcall (slot-value state 'convert-type) code)
+		 code)))
+    (make-instance 'value :from from :type type)))
 
 (defun fun-resolve (code type-of &key (state *state*) defer-to-fun)
   "Resolves the functions of the code. (Function inference instead of type\
  inference.)
 Returns the tree with the names replaced with function structs, and\
  variables paired with their types everywhere."
-  (with-slots (macs) state
   (with-fun-resolve
   (cond
   ;Nothing.
@@ -86,8 +83,9 @@ Returns the tree with the names replaced with function structs, and\
     ((case (type-of (car code)) ((fun value out) t))
      code)
   ;Its a (raw)macro.
-    ((and (get-symbol (car code) macs state) (not defer-to-fun))
-     (let ((macset (get-symbol (car code) macs state)))
+    ((and (get-symbol (car code) (slot-value state 'macs) state)
+	  (not defer-to-fun))
+     (let ((macset (get-symbol (car code) (slot-value state 'macs) state)))
        (assert macset () "Could not find macro of this name." (car code))
        (with-slots (typeset-arg-cnt item) macset
 	 (let*(arg-types
@@ -121,8 +119,7 @@ Returns the tree with the names replaced with function structs, and\
 		    (mac (resolve result type-of))
 		    (rawmac result)))))))))
   ;It should be a function.
-    (t 
-	 ;Get results of arguments.
+    (t  ;Get results of arguments.
      (let*((arguments (loop for el in (cdr code)
 			 collect (resolve el type-of)))
 	 ;Get function with the types.
@@ -135,21 +132,26 @@ Returns the tree with the names replaced with function structs, and\
 	   (cond
 	     ((in-list flags :inline) ;If inline, yank it here.
       ;TODO namespaces can break it, prevent that from happening.
-	      (resolve
-	       (let ((want (loop for el on full-code
-			      when (listp (car el))
-			      return el)))
-		 `(|let| (,@(loop for a  in arguments
-			          for fa in (car want)
-			       collect `(,(if (listp fa) (car fa) fa)
-					  ,a)))
-			 ,@(cdr want)))
-	       type-of))
-	     (t ;Just return the function with the arguments.
-	      (cons fun arguments))))
+	      (resolve (let ((want (loop for el on full-code
+				      when (listp (car el))
+				      return el)))
+			 `(|let| (,@(loop for a  in arguments
+				          for fa in (car want)
+				      collect `(,(if (listp fa) (car fa) fa)
+						 ,a)))
+			    ,@(cdr want)))
+		       type-of))
+	     (t;Return the function with the arguments, converted if needed.
+	      (cons fun
+		    (loop for a-tp in (arg-types fun)
+  		          for a in arguments
+		       collect
+			 (if-with conv (conv-get (list (out-type a) a-tp)
+						 :state state)
+			   `(,conv ,a) a))))))
 	 (progn
 	   (setf fun (make-instance 'out :name :type-not-found :code code))
-	   (cons fun arguments)))))))))
+	   (cons fun arguments))))))))
 
 ;Not at all tested.
 (defun count-var-dependencies (res &optional so-far)

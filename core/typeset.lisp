@@ -32,43 +32,56 @@
 (defclass top-typeset (typeset)
   ((exact-hash :initform (make-hash-table :test 'equalp))))
 
-(defun type-coarser (type compare-type &key (state *state*))
+(defun type-coarser (type specific &key (state *state*) (vars (list nil)))
   "function-match for a single argument."
   (cond
    ;Symbols that are not first in list are variables to first 
    ;which type it is. '(any) is unnamed arbitrary.
-    ((symbolp type)
-     t)
+    ((symbolp type) ;See if correct, or first appearance.
+     (if (when (listp specific) (eql (car specific) '|ref|))
+       nil
+       (if-with got (assoc type (car vars))
+	 (equalp (cadr got) specific)
+         (progn (push (list type specific) (car vars)) t))))
    ;Can manually manipulate to make things more/less general.
-;TODO undertested.
     ((loop for coarser-fun in (slot-value state 'manual-type-coarser)
-       when(funcall coarser-fun type compare-type state)
+	when (funcall coarser-fun type specific state vars)
 	return t)
      t)
-    ((or (not(listp compare-type)) (not (listp type)))
+    ((not (listp specific))
+     nil)
+   ;Look for conversion functions. (They imply generality.)
+    ((and* (listp specific)
+      (when-with got (gethash (car specific) (slot-value state 'conversion))
+	(typeset-get got (list (cadr specific) type) :state state)))
+     t)
+   ;Any type not a list nor a symbol is a problem, 
+    ((not (listp type))
+     (error "Types should be lists or symbols.")
      nil)
     ;Numbers, integers, etc. are checked for precise equality.
 ;TODO eql* also checks for variable numbers? (Code for that elsewhere.)
-    ((eql (car type) (car compare-type))
-     (when (= (length type) (length compare-type))
+    ((eql (car type) (car specific))
+     (when (= (length type) (length specific))
        (not (loop for fatp in (cdr type)
-	          for tp in (cdr compare-type)
-	       unless (type-coarser fatp tp :state state)
+	          for tp in (cdr specific)
+	       unless (type-coarser fatp tp :state state :vars vars)
 	       return t))))
     (t nil)))
 
 ;;TODO how to make and, or?
-(defun type-list-coarser (types compare-types &key (state *state*))
+(defun type-list-coarser (general specific
+			  &key (state *state*) (vars (list nil)))
   "Determines whether the given list of types is such that it can be used 
 to form the argument of the function."
-  (when (= (length types) (length compare-types))
-    (not (loop for tp   in types
- 	       for c-tp in compare-types
-	    unless (type-coarser tp c-tp :state state)
+  (when (= (length general) (length specific))
+    (not (loop for g   in general
+ 	       for s in specific
+	    unless (type-coarser g s :state state :vars vars)
 	    return t))))
 
-(defun typeset-coarser (typeset compare-typeset &key (state *state*))
-  (type-list-coarser (arg-types typeset) (arg-types compare-typeset)
+(defun typeset-coarser (typeset specific &key (state *state*))
+  (type-list-coarser (arg-types typeset) (arg-types specific)
 		     :state state))
 
 (defun type-eql (type-a type-b &key (state *state*))

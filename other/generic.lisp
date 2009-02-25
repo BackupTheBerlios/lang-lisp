@@ -28,7 +28,8 @@
 	   and* or*
 	   defclass2
 	   simple-accessor simple-accessor-set
-	   simple-setf-fun))
+	   simple-setf-fun
+	   argumentize-list &key &optional &rest))
 
 (in-package #:generic)
 

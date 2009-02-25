@@ -25,22 +25,15 @@
 
 (in-package #:lang)
 
-(with-slots (more-specific)
-    (get-symbol 'do-times (slot-value *state* 'macs) *state*)
-  (loop for el in more-specific
-     collect el))
-
-(typeset-get (get-symbol 'do-times (slot-value *state* 'macs) *state*)
-	     '((|integer|)))
-
-(type-coarser '(|any|) '(|int64|))
+(print 'a)
 
 (eval-str (:to-c) "progn 50.9")
 
 (eval-str (:to-c :body-level t) "progn-raw
   (do-times (const 3) (i) i)")
 
-(eval-str (:to-c :body-level t :fun-top t) "progn-raw
+;TODO this shows that namespace not properly implemented yet.
+(eval-str (:summary :body-level t :fun-top t) "namespace lala
   (let (a 1 ; b 4) |
     * a b;)")
 
@@ -55,7 +48,7 @@
 ;  (format stream
 (eval-str (:to-c :body-level t) "progn-raw
   (let (a 45 ; b 61) |
-    progn-raw 5 6 2 ;
+    progn 5 6 2;
     + a (let ((c (sqr (let ((d a)) (+ b d))))) | * c b;);")
 
 (eval-str (:to-c :body-level t) "progn-raw
@@ -65,8 +58,14 @@
 
 (eval-str (:tokenize) "")
 
-(eval-str (:to-c :body-level t) "progn-raw
+;NOTE* pointers and references not loaded right now.
+;TODO to-c does not produce valid code yet; no conversion of types yet.
+(eval-str (:summary :body-level t) "progn-raw
   (let (a 56;) (let (b (ref a);) (+ a b)))")
+
+(type-coarser '(|ref| any) 'any)
+
+(setf (gethash '|ref| (slot-value *state* 'conversion)) nil)
 
 (eval-str (:to-c :body-level t :vars '((|a| (|ptr| (|int64|)))))
   "progn-raw (val a)")

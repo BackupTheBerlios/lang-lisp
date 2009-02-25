@@ -22,24 +22,28 @@
 ;Reading s-expresions from file.
 (load "other/reader.lisp")
 
-(defpackage #:lang
-  (:use #:common-lisp #:generic #:reader))
-
-;Function and macro to get stuff from a list like a macro.
+(load "other/namespace.lisp")
 (load "other/argument-positioner.lisp")
+
+(load "other/simple-macexpand.lisp")
+
+(defpackage #:lang
+  (:use #:common-lisp #:generic #:namespace #:reader))
+;Function and macro to get stuff from a list like a macro.
 
 ;The code that does the processing to an s-expression with the functions and
 ;values entirely specified as objects with arguments and return types.
 (load "core/fun-base.lisp")
-(load "core/states.lisp")  ;Extensions of the state that macros/output use.
 
-(load "core/typeset.lisp")
 (load "core/type-util.lisp")
+(load "core/typeset.lisp")
 
 (load "core/typeset-named.lisp")
 (load "core/fun-get.lisp")
 (load "core/mac-get.lisp")
 (load "core/fun-resolve.lisp")
+
+(load "core/states.lisp")  ;Extensions of the state that macros/output use.
 
 ;Macros that you need to actually do anything with it.
 (load "macs/macs.lisp")
@@ -51,8 +55,9 @@
 (load "types/any.lisp")
 (load "types/eql.lisp")
 (load "types/numbers.lisp")
-(load "types/pointers.lisp")
+;(load "types/pointers.lisp")
 
 ;Output.(Uses the macros.
 (load "convert/to-c.lisp")
+
 

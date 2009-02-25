@@ -20,7 +20,7 @@
 (in-package #:lang)
 
 (setf (fun-state-manual-type-coarser *state* '|eql|)
-      (lambda (type compare-type state)
+      (lambda (type compare-type state vars)
 	"Eql."
 	(declare (ignorable state))
 	(cond

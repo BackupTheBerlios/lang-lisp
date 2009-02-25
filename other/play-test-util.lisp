@@ -62,6 +62,7 @@ Nil if it doesn't recognize it."
 		   (expt 10.0 (- (+ n 1) (length str))))))
    (parse-integer str :junk-allowed t)))
 
+;;TODO make it proper for non-playtest.
 (defun eval-str-fun (type str &key vars (state *state*)
 		     more-on-fun more-on-mac
 		     (body-level t) fun-top top-level)

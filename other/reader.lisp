@@ -40,8 +40,9 @@ Returns: the string token, the ending index, the element it stopped at."
   tok)
 
 (defun tokenize-str (str &key (wrap #'no-wrap)
-		          (whitespace (list #\Tab #\Space #\Newline))
- 		          (comment (list #\#)) except except-prev)
+		     (whitespace (list #\Tab #\Space #\Newline))
+		     (comment (list #\#))
+		     except except-prev)
   "Makes a list with tokens. Wrap takes as second argument the index of \
 the first element.
 Whitespace are the token-sepating characters.(Otherwise ignored.)
@@ -116,11 +117,11 @@ by whitespace."
   (lambda (str) (string= str with)))
 
 (defun tokenlist-make-tree (from &key
-	 (list-open (string=-curry "(")) (list-close (string=-curry ")"))
-	 (comment-start (string=-curry ".")) (comment-stop (string=-curry "."))
-	 (sep (string=-curry ";")) (sep-stop (string=-curry "|"))
-	 (next-lister (string=-curry "'"))
-	 cnt)
+     (list-open (string=-curry "(")) (list-close (string=-curry ")"))
+     (comment-start (string=-curry ".")) (comment-stop (string=-curry "."))
+     (sep (string=-curry ";")) (sep-stop (string=-curry "|"))
+     (next-lister (string=-curry "'"))
+     cnt)
   "Makes a tree with a list of tokens."
   (let* (out sep-out is-sep)
     (flet ((make-tree (list &key cnt)

@@ -47,15 +47,29 @@
 (add-type '|ref| ('atomic-type)
 	  :size (get-extension-slot *state* :types 'pointer-type-size))
 
-(setf (fun-state-manual-type-coarser *state* '|ref|)
-      (lambda (type compare-type state)
-	(flet ((reference (tp)
-		 (and* (listp tp) (= 2 (length tp))
-		       (eql (car tp) '|ref|))))
-	  (when (reference compare-type)
-	    (if (reference type)
-		(type-coarser (cadr type) (cadr compare-type) :state state)
-		(type-coarser type (cadr compare-type) :state state))))))
+;(setf (fun-state-manual-type-coarser *state* '|ref|)
+;      (lambda (type compare-type state vars)
+;	(flet ((reference (tp)
+;		 (and* (listp tp) (= 2 (length tp))
+;		       (eql (car tp) '|ref|))))
+;	  (when (reference compare-type)
+;	    (if (reference type)
+;		(type-coarser (cadr type) (cadr compare-type)
+;                 :state state :vars vars)
+;		(type-coarser type (cadr compare-type)
+;                 :state state :vars vars))))))
+
+(conv-add '|ref_ptr| '((|ref| anything) (|ptr| anything)) ()
+  :c-name 'identity :flags '(|:chase-args|))
+(conv-add '|ptr_ref| '((|ptr| anything) (|ref| anything)) ()
+  :c-name 'identity :flags '(|:chase-args|))
+
+(conv-add '|ref_any| '((|ref| anything) anything) () :c-name '*
+  :doc-str "Reference to non-reference conversion." :flags '(|:chase-args|))
+
+;TODO what about references if setf-functions and variables, surely treat 
+;them differently. (call then ref-var and ref-fun, ref-var convertable to 
+;functions.)
 
 ;Note that it used the typeset; when there are objects that are already 
 ;behind a pointer, but the pointer is never in the users control, you don't

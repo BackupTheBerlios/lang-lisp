@@ -17,7 +17,7 @@
 ;;  along with Lang.  If not, see <http://www.gnu.org/licenses/>.
 ;;
 
-(in-package #:lang)
+(in-package #:generic)
 
 ;TODO better error reporting.
 ;TODO Seems a little cryptic, add some explaning comments.
@@ -36,19 +36,19 @@
 		   out))))
       (t
        (case e
-	 (cl:&optional
+	 (&optional
 	  (case key
 	    (-1 (setf key -2))
 	    (-2 (error "&optional twice."))
 	    (-3 (error "&optional after &rest"))
 	    (t  (error "&optional after an &key."))))
-	 (cl:&key
+	 (&key
 	  (case key
 	    (-1 (setf key i))
 	    (-2 (error "&key after &optional"))
 	    (-3 (error "&key after &rest"))
 	    (t  (error "twice &key."))))
-	 (cl:&rest
+	 (&rest
 	  (case key
 	    (-1 (push `(,(nth (+ i 1) args) (nthcdr ,i ,list))
 		      out)

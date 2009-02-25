@@ -36,9 +36,10 @@
 		     (append (list ',non-inverse second) rest)))
 	     :defer-to-fun)))
 
+;;TODO replace with conversion functions.
 ;;Number types large enough for eachother are compatible.
 (setf (fun-state-manual-type-coarser *state* '|number|)
-      (lambda (type compare-type state)
+      (lambda (type compare-type state vars)
 	(when (and (null (cdr type)) (null (cdr compare-type)))
 	  (let ((types '(|int8| |int16| |int32| |int64| |integer|
 			 |float| |double| |long-double| |number|)))
@@ -64,7 +65,7 @@
 
 ;TODO what about just int? Equal it to int64 or int32?
 ;     And unsigned integers?
-;TODO why are things turning float? (hmm behavior gone..)
+;Small stuff goes to a default size. Floats win from integers.
 ;Note that information _can_ be lost! (int32, int64 -> float.
 (let*((def-flt 1) (def-int 1)
       (reals '((|float|) (|double|) (|long-double|) (|number|)

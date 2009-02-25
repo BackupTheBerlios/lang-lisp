@@ -33,7 +33,7 @@
 			 :tab-depth tab-depth :do-auto do-auto)))
     (if (not (listp type)) "Any"
       (case (car type)
-	(|ptr|
+	((|ptr| |ref|)
 	 (format nil "~D*" (process-tp (second type))))
 	(t 
 	 (let ((typespec (gethash (car type)
@@ -88,6 +88,10 @@ variable name."
 
 ;NOTE will also need to continuously collect the stuff.
 
+(defmethod c-name ((list list))
+  (print list)
+  (c-name (car list)))
+
 ;;TODO horrid code.
 ;; Maybe add conversion functions to the macros, and use them.
 (defun process-code (code &key (state *state*) fun-top
@@ -124,12 +128,21 @@ variable name."
     (fun ;Convert function.
      (argumentize-list (fun &rest args) code
        (c-return
-	(cond ;Binary functions must be written as such.
+	;TODO conversion of types!? (Won't work for references, currently.)
+	(cond 
+	 ;Identity function needs nothing.
+	  ((eql (slot-value fun 'c-name) 'identity)
+	   (unless (= (length args) 1)
+	     (error "Identity function should only have one argument."))
+	   (c-return (process (car args))))
+	 ;Binary functions must be written as such.
 	  ((in-list (slot-value fun 'flags) :c-binary-fun)
+	   (unless (= (length args) 2)
+	     (error "Binary functions have two arguments."))
 	   (format nil "(~D ~D ~D)" (process (first args))
 		   (c-name fun)
 		   (process (second args))))
-  	     ;Some things that are known not to need more hooks.
+  	 ;Some things that are known not to need more hooks.
 	  ((case (c-name fun) ((* & ~ !) t))
 	   (format nil "~D~D"  (c-name fun) (process (car args))))
 	  (t ;Regular stuff.
