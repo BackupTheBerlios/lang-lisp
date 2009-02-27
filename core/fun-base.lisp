@@ -36,7 +36,8 @@
    (manual-type-coarser-names :initform nil :type list)
    
  ;Conversion-funs. Take two arguments, from, to.
-   (conversion :initform (make-hash-table))
+   (conversion
+    :initform (make-instance 'typeset :arg-types '((|any|) (|any|))))
 
  ;(raw)Macros. (Getting these individually in mac-get.lisp)
    (macs :accessor macs :initform (make-hash-table))
@@ -49,6 +50,8 @@
    (extensions :initform nil :initarg extensions :type list)
    ))
 
+;TODO can getting and setting manual functions be done better?
+;  (answer is yes)
 (defun fun-state-manual-type-coarser (state name)
   "Gets a manual coarser function."
   (with-slots (manual-type-coarser manual-type-coarser-names) state

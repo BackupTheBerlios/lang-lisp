@@ -42,7 +42,11 @@
 (mac-add progn () () (&rest body)
   (case (length body)
     (1 (car body))
-    (t `(progn-raw ,@body))))
+    (t `(progn-raw
+	 ,@(loop for c in body
+	      if (when (listp c) (case (car c) ((progn |progn|) t)))
+	      append (cdr c)
+	      else collect c)))))
     
 ;;Body-like stuff
 (rawmac-add progn-raw () () (&rest body)
@@ -65,13 +69,24 @@
 	   (loop for c in varlist
 	      collect
 		(argumentize-list (name value) c
-		  (let ((res (resolve value type-of)))
+		  (let ((res (resolve value type-of))
+			(name (if (listp name) (cadr name) name)))
 		    ;Make variable in namespace.
 		    `(,(namespace-symbol name state) ,res)))))
 	  (new-type-of ;Add some types.
 	    (append
-	     (loop for el in var-list
-		collect (list (car el) (out-type (cadr el))))
+	     (loop for c in varlist
+		   for el in var-list
+		collect `(,(car el)
+			  ,(let ((out-type (out-type (cadr el))))
+			     (cond
+			       ((not(listp (car c)))
+				out-type)
+			       ((eql (caar c) '|ref|)
+				(case (when (not (listp out-type))
+					(car out-type))
+				  (|ref| out-type) ;Already settable.
+				  (t     `(|ref-var| ,out-type))))))))
 	     type-of))
 	  ;Resolve output. (Doesn't have a progn-like thing at its end.)
 	  (out-res  (resolve `(progn ,@body) new-type-of)))

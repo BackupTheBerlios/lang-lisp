@@ -19,9 +19,9 @@
 (produce-xml-stream '(a (attr (q "314") (r "1")) b c) nil)
 
 ;Just an example, obviously will need a better macro for it.
-(add-mac 'img (&rest args) (:code-var code)
-  (values `(img (attr (alt ,(getf args :alt)) (src ,(getf args :src))))
+(add-mac 'img (&key alt src) (:code-var code)
+  (values `(img (attr ,@(when alt `((alt ,alt))) ,@(when src `((src ,src)))))
 	  :stop))
 
-(produce-xml-stream (resolve '(img :src "not-a-lolcat.png" :alt "LALA"))
+(produce-xml-stream (resolve '(img src "not-a-lolcat.png"))
 		    nil)

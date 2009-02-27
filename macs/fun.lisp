@@ -43,7 +43,7 @@
 		       (let ((tmp (car body)))
 			 (setf- cdr body) tmp)))
 	    (res (unless only-record
-		   (resolve `(progn ,@body) (append type-of args))))
+		   (resolve `(progn-raw ,@body) (append type-of args))))
 	    (arg-types
 	     (loop for a in args
 		collect (if (listp a) (cadr a) `(,a (any)))))

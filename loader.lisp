@@ -45,6 +45,11 @@
 
 (load "core/states.lisp")  ;Extensions of the state that macros/output use.
 
+;Output.(Uses the macros.)
+(load "convert/to-c.lisp")
+
+(load "other/chain.lisp")
+
 ;Macros that you need to actually do anything with it.
 (load "macs/macs.lisp")
 (load "macs/fun.lisp")
@@ -55,9 +60,7 @@
 (load "types/any.lisp")
 (load "types/eql.lisp")
 (load "types/numbers.lisp")
-;(load "types/pointers.lisp")
+(load "types/pointers.lisp")
 
-;Output.(Uses the macros.
-(load "convert/to-c.lisp")
 
 

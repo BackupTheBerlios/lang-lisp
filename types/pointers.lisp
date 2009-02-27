@@ -43,29 +43,25 @@
   :doc-str "Difference between pointers.(TODO by whole object??)" :c-name '-
   :out-type '(|ptr-integer|) :flags '(:c-binary-fun :chase-args))
 
-;References are use as if just the argument itself.
+;References are used as if just the argument itself.
 (add-type '|ref| ('atomic-type)
 	  :size (get-extension-slot *state* :types 'pointer-type-size))
 
-;(setf (fun-state-manual-type-coarser *state* '|ref|)
-;      (lambda (type compare-type state vars)
-;	(flet ((reference (tp)
-;		 (and* (listp tp) (= 2 (length tp))
-;		       (eql (car tp) '|ref|))))
-;	  (when (reference compare-type)
-;	    (if (reference type)
-;		(type-coarser (cadr type) (cadr compare-type)
-;                 :state state :vars vars)
-;		(type-coarser type (cadr compare-type)
-;                 :state state :vars vars))))))
-
-(conv-add '|ref_ptr| '((|ref| anything) (|ptr| anything)) ()
-  :c-name 'identity :flags '(|:chase-args|))
-(conv-add '|ptr_ref| '((|ptr| anything) (|ref| anything)) ()
-  :c-name 'identity :flags '(|:chase-args|))
-
-(conv-add '|ref_any| '((|ref| anything) anything) () :c-name '*
-  :doc-str "Reference to non-reference conversion." :flags '(|:chase-args|))
+(setf (fun-state-manual-type-coarser *state* '|ref|)
+      (lambda (type compare-type state vars)
+	(flet ((reference (tp)
+		 (and* (listp tp) (= 2 (length tp))
+		       (case (car tp) ((|ref| |ref-var|) t)))))
+	  (when (reference compare-type)
+	    (cond
+	      ((reference type)
+	   ;Ref-var subordinate to ref to keep ordering of types.
+	       (unless (eql (car type) '|ref-var|)
+		 (type-coarser (cadr type) (cadr compare-type)
+			       :state state :vars vars)))
+	      (t
+	       (type-coarser type (cadr compare-type)
+			     :state state :vars vars)))))))
 
 ;TODO what about references if setf-functions and variables, surely treat 
 ;them differently. (call then ref-var and ref-fun, ref-var convertable to 
@@ -82,6 +78,11 @@ weren't references. However, it might be a good idea to stay functional!
 WARNING currently ref does _not_ check if what it refers to still exists!"
   :out-type '(|ref| anything) :c-name '& :flags '(:chase-args))
 
+;Only one level of reference allowed.
+(evalm str res "progn-raw
+  (defun ref :inline (of (ref(ref anything));)
+    of))")
+
 (fun-add '|ref| '((|ptr| anything)) ()
   :doc-str "Reference to a pointer. The pointer is made to behave like a \
 reference."
@@ -91,3 +92,15 @@ reference."
   :doc-str "Pointer of an reference. The reference is already a pointer, \
 but now you get to treat it as a pointer too."
   :out-type '(|ptr| anything) :c-name 'identity :flags '(:chase-args))
+
+
+(fun-add '|ref| '((|var| anything)) ()
+  :doc-str "Reference to a variable; does not do anything, but allows it to 
+  automatically reference when there is a reference-only function."
+  :c-name 'identity :flags '(:chase-args)
+  :out-type '(|ref-var| anything))
+
+(fun-add '|ptr| '((|ref-var| anything)) ()
+  :doc-str "Pointer of a referenced variable."
+  :c-name '& :flags '(:chase-args)
+  :out-type '(|ptr| anything))

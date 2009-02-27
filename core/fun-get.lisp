@@ -101,22 +101,16 @@ Warning: arg types of the added function must be correct!"
   "Gets the conversion"
   (unless (= (length arg-types) 2)
     (error "Conversion functions don't come with two arguments."))
-  (argumentize-list ((conv-type first) second) arg-types
-    (when-with got (gethash conv-type (slot-value state 'conversion))
-      (typeset-get got `(,first ,second) :state state))))
+  (typeset-get (slot-value state 'conversion) arg-types
+	       :state state :no-conversion t))
 
 (defun (setf conv-get) (to arg-types &key (state *state*))
   "Sets the conversion"
   (unless (= (length arg-types) 2)
     (error "Conversion functions may only have two arguments."))
-  (with-slots (conversion) state
-    (argumentize-list ((conv-type first) second) arg-types
-      (if (gethash conv-type conversion)
-	  (setf (typeset-get (gethash conv-type conversion)
-			     `(,first ,second) :state state)
-		to)
-	  (setf (gethash conv-type conversion) to))))) 
-      
+  (setf (typeset-get (slot-value state 'conversion) arg-types
+		     :state state :no-conversion t)
+	to))
 
 (defmacro conv-add (name arg-types (&key (state '*state*)) &rest rest)
   "Makes a conversion function."

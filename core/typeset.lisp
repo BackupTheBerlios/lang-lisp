@@ -32,17 +32,17 @@
 (defclass top-typeset (typeset)
   ((exact-hash :initform (make-hash-table :test 'equalp))))
 
-(defun type-coarser (type specific &key (state *state*) (vars (list nil)))
+(defun type-coarser (type specific &key (state *state*) (vars (list nil))
+		     no-conversion)
   "function-match for a single argument."
   (cond
    ;Symbols that are not first in list are variables to first 
    ;which type it is. '(any) is unnamed arbitrary.
     ((symbolp type) ;See if correct, or first appearance.
-     (if (when (listp specific) (eql (car specific) '|ref|))
-       nil
-       (if-with got (assoc type (car vars))
-	 (equalp (cadr got) specific)
-         (progn (push (list type specific) (car vars)) t))))
+     (if-with got (assoc type (car vars))
+       (equalp (cadr got) specific)
+       (progn (push (list type specific) (car vars))
+	      t)))
    ;Can manually manipulate to make things more/less general.
     ((loop for coarser-fun in (slot-value state 'manual-type-coarser)
 	when (funcall coarser-fun type specific state vars)
@@ -50,11 +50,11 @@
      t)
     ((not (listp specific))
      nil)
-   ;Look for conversion functions. (They imply generality.)
-    ((and* (listp specific)
-      (when-with got (gethash (car specific) (slot-value state 'conversion))
-	(typeset-get got (list (cadr specific) type) :state state)))
-     t)
+   ;Look for conversion functions. (They imply generality.)e
+;    ((unless no-conversion
+;       (typeset-get (slot-value state 'conversion)
+;		    (list (cadr specific) type) :state state))
+;     t)
    ;Any type not a list nor a symbol is a problem, 
     ((not (listp type))
      (error "Types should be lists or symbols.")
@@ -65,24 +65,26 @@
      (when (= (length type) (length specific))
        (not (loop for fatp in (cdr type)
 	          for tp in (cdr specific)
-	       unless (type-coarser fatp tp :state state :vars vars)
+	       unless (type-coarser fatp tp :state state :vars vars
+				    :no-conversion no-conversion)
 	       return t))))
     (t nil)))
 
 ;;TODO how to make and, or?
-(defun type-list-coarser (general specific
-			  &key (state *state*) (vars (list nil)))
+(defun type-list-coarser (general specific &key (state *state*)
+			  (vars (list nil)) no-conversion)
   "Determines whether the given list of types is such that it can be used 
 to form the argument of the function."
   (when (= (length general) (length specific))
     (not (loop for g   in general
  	       for s in specific
-	    unless (type-coarser g s :state state :vars vars)
+	    unless (type-coarser g s :state state :vars vars
+				     :no-conversion no-conversion)
 	    return t))))
 
-(defun typeset-coarser (typeset specific &key (state *state*))
+(defun typeset-coarser (typeset specific &key (state *state*) no-conversion)
   (type-list-coarser (arg-types typeset) (arg-types specific)
-		     :state state))
+		     :state state :no-conversion no-conversion))
 
 (defun type-eql (type-a type-b &key (state *state*))
   "Tests if two types are equal."
@@ -114,14 +116,16 @@ both ways. ~D ~D" types-a types-b)))))
 (defun typeset-eql (typeset-a typeset-b &key (state *state*))
   (type-list-eql (arg-types typeset-a) (arg-types typeset-b) :state state))
 
-(defun type-list-prefer (type-a type-b &key state (lvl 0))
+(defun type-list-prefer (type-a type-b &key state (lvl 0) no-conversion)
   (let (coarser-ab coarser-ba undecided done)
     (loop for tp-a in type-a
           for tp-b in type-b
        when
 	 (progn
-	   (setf coarser-ab (type-coarser tp-a tp-b :state state))
-	   (setf coarser-ba (type-coarser tp-b tp-a :state state))
+	   (setf coarser-ab (type-coarser tp-a tp-b
+			      :state state :no-conversion no-conversion))
+	   (setf coarser-ba (type-coarser tp-b tp-a
+			      :state state :no-conversion no-conversion))
 	   (cond
 	     ((and coarser-ab coarser-ba)
 	      nil)
@@ -140,20 +144,22 @@ both ways. ~D ~D" types-a types-b)))))
 	   (dolist (u undecided)
 	     (if (eql (caar u) (caadr u))
 	       (type-list-prefer (cdar u) (cdadr u) :state state
-				 :lvl (+ lvl 1)))
+		 :lvl (+ lvl 1) :no-conversion no-conversion))
 	     (string-lessp (caar u) (caadr u)))))))
 
-(defun typeset-prefer (ts-a ts-b &key state)
-  (type-list-prefer (arg-types ts-a) (arg-types ts-b) :state state))
+(defun typeset-prefer (ts-a ts-b &key state no-conversion)
+  (type-list-prefer (arg-types ts-a) (arg-types ts-b)
+		    :state state :no-conversion no-conversion))
 
-(defun typeset-redivide (typeset to-ts &key (state *state*))
+(defun typeset-redivide (typeset to-ts &key (state *state*) no-conversion)
   "Checks all the slots in the typeset, and moves them to-ts if to-ts is
 general enough. DOES NOT resort the thing."
   (with-slots (more-specific) typeset
     (let ((divide-list more-specific))
       (setf more-specific nil)
       (dolist (ts divide-list)
-	(if (typeset-coarser to-ts ts :state state)
+	(if (typeset-coarser to-ts ts
+	      :state state :no-conversion no-conversion)
 	  (push ts (slot-value to-ts 'more-specific))
 	  (push ts more-specific))))))
 
@@ -163,8 +169,8 @@ general enough. DOES NOT resort the thing."
   (format nil "~D" arg-types))
 ;TODO i suppose this is done consistantly at all times! Am i correct?
 
-(defun typeset-get (typeset arg-types
-		    &key (state *state*) (top t) (use-hash t))
+(defun typeset-get (typeset arg-types &key (state *state*)
+		    (top t) (use-hash t) no-conversion)
   "Gets a function from a list based on the argument types."
   (cond
     ((and* top use-hash (equal (type-of typeset) 'top-typeset)
@@ -175,14 +181,15 @@ general enough. DOES NOT resort the thing."
     (t
      (loop for ts in (slot-value typeset 'more-specific)
       ;Look for the one that matches.
-	when (type-list-coarser (arg-types ts) arg-types :state state)
+	when (type-list-coarser (arg-types ts) arg-types
+				:state state :no-conversion no-conversion)
       ;When found, look if it has a more specific match.
 	return (if-use (typeset-get ts arg-types :state state :top nil)
 		       ts)))))
 
 ;TODO eventually i will need to re-evaluate this function, it is very long..
-(defun (setf typeset-get) (set-to typeset arg-types
-			   &key (state *state*) (top t) (use-hash t))
+(defun (setf typeset-get) (set-to typeset arg-types &key (state *state*)
+			   (top t) (use-hash t) no-conversion)
   (cond
     ((when (and top use-hash (equal (type-of typeset) 'top-typeset))
        (gethash (type-list-spec-string arg-types)
@@ -195,16 +202,17 @@ general enough. DOES NOT resort the thing."
 		       (slot-value typeset 'exact-hash))
 	      set-to))))
     ((unless top
-       (type-list-coarser arg-types (arg-types typeset) :state state))
+       (type-list-coarser arg-types (arg-types typeset)
+			  :state state :no-conversion no-conversion))
      (error "(langs fault)Shouldn't be more general then the typeset you\
  are trying to add to."))
     ((let (was-coarser)
      (loop for ts in (slot-value typeset 'more-specific)
 	when
 	  (let ((coarser (type-list-coarser arg-types (arg-types ts)
-					    :state state))
+			   :state state :no-conversion no-conversion))
 		(finer   (type-list-coarser (arg-types ts) arg-types
-					    :state state)))
+			   :state state :no-conversion no-conversion)))
 	    (cond 
 	     ;Match.
 	      ((and finer coarser)
@@ -244,11 +252,13 @@ there."))))))
      (typeset-redivide typeset set-to :state state)
      (flet ((re-sort (list)
 	      (sort list (lambda (ts-a ts-b)
-			   (typeset-prefer ts-a ts-b :state state)))))
+			   (typeset-prefer ts-a ts-b
+			     :state state :no-conversion no-conversion)))))
        (with-slots (more-specific) typeset
      ;Find things that are more specific then what we have.
 	 (dolist (ts more-specific)
-	   (when-with prefer (typeset-prefer set-to ts :state state)
+	   (when-with prefer (typeset-prefer set-to ts
+			       :state state :no-conversion no-conversion)
 	     (unless (integerp prefer) ;Integers are choosen alphabetically.
 	       (typeset-redivide ts set-to)
 	       (setf- re-sort (slot-value ts 'more-specific)))))

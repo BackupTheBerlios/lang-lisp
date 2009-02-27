@@ -89,10 +89,10 @@ variable name."
 ;NOTE will also need to continuously collect the stuff.
 
 (defmethod c-name ((list list))
-  (print list)
   (c-name (car list)))
 
-;;TODO horrid code.
+;;TODO horrid code. How about a sort of macro resolving instead?
+
 ;; Maybe add conversion functions to the macros, and use them.
 (defun process-code (code &key (state *state*) fun-top
 	      (var-precede "") top-level body-level (tab-depth 0) do-auto)

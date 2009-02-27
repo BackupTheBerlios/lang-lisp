@@ -36,14 +36,14 @@
 		     (append (list ',non-inverse second) rest)))
 	     :defer-to-fun)))
 
-;;TODO replace with conversion functions.
 ;;Number types large enough for eachother are compatible.
 (setf (fun-state-manual-type-coarser *state* '|number|)
       (lambda (type compare-type state vars)
-	(when (and (null (cdr type)) (null (cdr compare-type)))
+	(when (when (and (listp type) (listp compare-type))
+		(and (null (cdr type)) (null (cdr compare-type))))
 	  (let ((types '(|int8| |int16| |int32| |int64| |integer|
 			 |float| |double| |long-double| |number|)))
-	    (loop for tp in types sum 1
+	    (loop for tp in types
 	       when (eql tp (car type))
 	       return nil
 	       when (eql tp (car compare-type))
@@ -67,11 +67,11 @@
 ;     And unsigned integers?
 ;Small stuff goes to a default size. Floats win from integers.
 ;Note that information _can_ be lost! (int32, int64 -> float.
-(let*((def-flt 1) (def-int 1)
-      (reals '((|float|) (|double|) (|long-double|) (|number|)
-	       (|eql| (|number| x))))
-      (ints  '((|integer|) (|int64|) (|int32|) (|int16|) (|int8|)
-	       (|eql| (|integer| n)))))
+(let*((def-flt 2) (def-int 4)
+      (reals '((|float|) (|eql| (|number| x)) (|double|)
+	       (|long-double|) (|number|)))
+      (ints  '((|int8|) (|int16|) (|int32|) (|eql| (|integer| n))
+	       (|int64|) (|integer|))))
   (dolist (s '(+ - * /))
     (flet ((add (t1 t2 to)
 	     (fun-add s `(,t1 ,t2) ()
@@ -83,11 +83,11 @@
 	 if (<= k def-flt)
 	      do (dolist (r2 r) (add r2 (car r) (nth def-flt reals)))
 	 else do (dolist (r2 r) (add r2 (car r) (car r))))
-      (loop for r on ints
+      (loop for i on ints
 	    for k from 0
 	 if (<= k def-int)
-	      do (dolist (r2 r) (add r2 (car r) (nth def-int ints)))
-	 else do (dolist (r2 r) (add r2 (car r) (car r)))))))
+	      do (dolist (i2 i) (add i2 (car i) (nth def-int ints)))
+	 else do (dolist (i2 i) (add i2 (car i) (car i)))))))
 
 ;And boolean returning ones.
 (let ((numbers

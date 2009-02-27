@@ -20,58 +20,45 @@
 ;Lang stuff and base lang libraries.
 (load "loader.lisp")
 
-;Stuff to play with. 
-(load "other/play-test-util.lisp")
+(load "types/var.lisp")
 
 (in-package #:lang)
 
 (print 'a)
 
-(eval-str (:to-c) "progn 50.9")
+(evalm str sum "progn 50.9")
 
-(eval-str (:to-c :body-level t) "progn-raw
+(evalm str res "progn (defun name ((x (any))) x)")
+
+(evalm str c "progn-raw
   (do-times (const 3) (i) i)")
 
-;TODO this shows that namespace not properly implemented yet.
-(eval-str (:to-c :body-level t :fun-top t) "namespace lala
-  (let (a 1 ; b 4) |
-    * a b;)")
+(evalm str c "progn-raw
+  (let (a 1;)
+    (namespace mew
+     (let (b 2;)
+       (* a b)))" :body-level t)
 
-(eval-str (:to-c :body-level t) "progn-raw
-  (defun meh (a (int64); b (int64)) (+ (* a b) b a))")
+;TODO why does it protest at first?
+;  And in process-code for that matter, that should be (nearly)stateless.
+(evalm str c "progn-raw
+  (defun meh (a (int64); b (int64)) (+ (* a b) b a))" :body-level t)
 
-(eval-str (:to-c :body-level t) "progn-raw
+;Note: this one needs meh
+(evalm str c "progn-raw
   (let (a 3 ; b 6) |
-    + a (bit-or (+ a 6 1) (meh a b));)")
+    + a (bit-or (+ a 6 1) (meh a b));)" :body-level t)
 
-;(with-open-file (stream "miauw" :if-exists :supersede :direction :output)
-;  (format stream
-(eval-str (:to-c :body-level t) "progn-raw
+(evalm str c "progn-raw
   (let (a 45 ; b 61) |
     progn 5 6 2;
-    + a (let ((c (sqr (let ((d a)) (+ b d))))) | * c b;);")
+    + a (let ((c (sqr (let ((d a)) (+ b d))))) | * c b;);" :body-level t)
 
-(eval-str (:to-c :body-level t) "progn-raw
+(evalm str c "progn-raw
   (let (a 56 ; b 6) |
     while (a) (sqr b);
-    |a")
+    |a" :body-level t)
 
-(eval-str (:tokenize) "")
+(evalm str c "progn-raw
+  (let (a 56;) (let ((ref b) 2;) (+ a b)))" :body-level t)
 
-;NOTE* pointers and references not loaded right now.
-;TODO to-c does not produce valid code yet; no conversion of types yet.
-(eval-str (:summary :body-level t) "progn-raw
-  (let (a 56;) (let (b (ref a);) (+ a b)))")
-
-(type-coarser '(|ref| any) 'any)
-
-(setf (gethash '|ref| (slot-value *state* 'conversion)) nil)
-
-(eval-str (:to-c :body-level t :vars '((|a| (|ptr| (|int64|)))))
-  "progn-raw (val a)")
-
-(print 'a)
-(setf (get-symbol '|ref| (funs *state*) *state*) nil)
-
-
-(typelist-get-var '(any) '((ptr (int))))

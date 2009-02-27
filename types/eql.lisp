@@ -25,9 +25,10 @@
 	(declare (ignorable state))
 	(cond
         ;See if they have the mark of eql.
-	  ((or* (not (listp type)) (not (listp compare-type))
-		(not (and (eql (car type) '|eql|)
-			  (eql (car compare-type) '|eql|))))
+	  ((if (or (not (listp type)) (not (listp compare-type)))
+	       t
+	       (not (and (eql (car type) '|eql|)
+			 (eql (car compare-type) '|eql|))))
 	   nil)
 	  ((listp (cadr type)) ;General type still undefined eql.
 	   (let ((c (cadr compare-type)))

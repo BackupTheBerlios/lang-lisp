@@ -33,7 +33,7 @@ It must always be clear what tree the syntax creates.</p>
     [body])</code>
 <p>Keywords for defun are things like :specify-as-needed, :inline.
 Arguments name-type pairs, if it is just a symbol, the type is <code>(any)</code></p>
-(See in 'Special qualifier types' what that is.))
+(See in <a href="#Special_qualifier_types">Special qualifier types</a> what that is.))
 
 
 <a name="Types_with_argmuments"><h3>Types with arguments</h3></a>
@@ -50,7 +50,7 @@ if no function is found, it tries to find one on this element.(And if it doesn't
 it there, it goes to the next one.
 (All the keywords still todo. <!--TODO-->)</p>
 
-<p>And example: <code>(struct list-node (item-type)
+<p>An example: <code>(struct list-node (item-type)
   (next (ptr (list-node item-type))) (item item-type))</code><br>
 Of course, you shouldn't make types circularly, but the pointer in this case
 makes the size of the node finite. Also note that you can do stuff like give initial 
