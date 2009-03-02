@@ -20,9 +20,6 @@
 
 (load "test/util.lisp")
 
-(defun eql-curry (with)
-  (lambda (sym) (eql sym with)))
-
 ;Unit test.
 ;;TODO current test passed, expand the test to include sep and sep-stop?
 (loop repeat 1000
@@ -31,24 +28,16 @@
 		 :from-symbols (loop repeat 20 collect (gensym)))))
      (equalp
       tree
-      (car(tokenlist-make-tree
-	   (tokenize-str (format nil "~D" tree)
-			 :wrap (lambda (tok k) (intern (string-upcase tok)))
-			 :except (list #\( #\) ))
-	   :list-open (eql-curry '|(|) :list-close (eql-curry '|)|)))))
+      (car(evalm str code (format nil "~D" tree)))))
    return (error "One of the written random trees didn't get read back
  correctly."))
 
 ;Playtests.
-(tokenlist-make-tree
- (tokenize-str "(progn
+(evalm str code "(progn
  (defun sqr (x (number);) | * x x ;)
  (defun meh (a (int); b (int)) |
-   + a (* 2 a b);)"
-	       :except (list #\( #\) #\; #\|)))
+   + a (* 2 a b);)")
 
-(tokenlist-make-tree
- (tokenize-str "(a b  (* x) x 43 1  6)"
-	       :except (list #\( #\) #\; #\|)))
+(evalm str code "(a b  (* x) x 43 1  6)")
 
 

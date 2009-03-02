@@ -26,7 +26,7 @@
 
 (print 'a)
 
-(evalm str sum "progn 50.9")
+(evalm str c "progn 50.9")
 
 (evalm str c "progn-raw (defun name ((x (any))) x)")
 
@@ -39,10 +39,10 @@
      (let (b 2;)
        (* a b)))" :body-level t)
 
-;TODO why does it protest at first?
+;TODO why does it protest at first? Why going through a raw typeset?
 ;  And in process-code for that matter, that should be (nearly)stateless.
 (evalm str c "progn-raw
-  (defun meh (a (int64); b (int64)) (+ (* a b) b a))" :body-level t)
+  (defun mah (a (int64); b (int64)) (+ (* a b) b a))" :body-level t)
 
 ;Note: this one needs meh
 (evalm str c "progn-raw
