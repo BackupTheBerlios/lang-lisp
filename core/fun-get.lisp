@@ -37,10 +37,6 @@
    
    (doc-str :initarg :doc-str :initform "" :type string)))
 
-(defun type-list-eql-like (tl1 tl2 &key (state *state*))
-  (and (type-list-coarser tl1 tl2 :state state)
-       (type-list-coarser tl2 tl1 :state state)))
-
 ;The reason this function is more complicated then just a wrapper round 
 ;named-typeset-get is that it also handles functions that are to be 
 ;specified as used. TODO move that to resolve?
@@ -52,7 +48,7 @@
     (with-slots (flags full-code) got
       (cond
 	((and* (in-list (slot-value got 'flags) :specify-as-used)
-	       (not (type-list-eql-like arg-types (arg-types got) 
+	       (not (type-list-eql arg-types (arg-types got) 
 					:state state)))
 ;TODO how does this interact with namespace??
 ;TODO problem: order of operation matters..

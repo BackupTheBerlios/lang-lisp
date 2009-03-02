@@ -29,7 +29,7 @@
   (make-instance 'value :type `(|eql| ,const)))
 
 (rawmac-add namespace () () (name &rest body)
-  (with-namespace name state
+  (with-namespace name
     (lambda () (fun-resolve `(progn ,@body) type-of))))
 
 (mac-add progn () () (&rest body)

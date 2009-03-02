@@ -18,31 +18,6 @@
 ;;
 (in-package #:lang)
 
-;;Pointer stuff.
-(add-type '|ptr| ('atomic-type) :size
-	  (get-extension-slot *state* :types 'pointer-type-size))
-
-(fun-add '|ptr| '(anything) ()
-  :doc-str "Pointer to an object."
-  :c-name '& :out-type '(|ptr| anything) :flags '(:chase-args))
-
-(fun-add '|val| '((|ptr| anything)) ()
-  :doc-str "Value of an object."
-  :c-name '*  :out-type 'anything :flags '(:chase-args))
-
-;;Shifting and differences or pointers.
-(fun-add '|aref| '((|integer|) (|ptr| anything)) ()
-  :doc-str "Uses C's []" :c-name '[]
-  :out-type 'anything :flags '(:chase-args))
-
-(fun-add '|ptr-shift| '((|ptr| anything) (|integer|)) ()
-  :doc-str "Shifting a pointer by whole object." :c-name '+
-  :out-type '(|ptr| anything) :flags '(:c-binary-fun :chase-args))
-
-(fun-add '|ptr-difference| '((|ptr| anything) (|ptr| anything)) ()
-  :doc-str "Difference between pointers.(TODO by whole object??)" :c-name '-
-  :out-type '(|ptr-integer|) :flags '(:c-binary-fun :chase-args))
-
 ;References are used as if just the argument itself.
 (add-type '|ref| ('atomic-type)
 	  :size (get-extension-slot *state* :types 'pointer-type-size))
@@ -62,10 +37,6 @@
 	      (t
 	       (type-coarser type (cadr compare-type)
 			     :state state :vars vars)))))))
-
-;TODO what about references if setf-functions and variables, surely treat 
-;them differently. (call then ref-var and ref-fun, ref-var convertable to 
-;functions.)
 
 ;Note that it used the typeset; when there are objects that are already 
 ;behind a pointer, but the pointer is never in the users control, you don't

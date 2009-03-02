@@ -97,7 +97,7 @@
     (setf namespaces nil)
     (setf write-namespace nil)))
 
-(defun with-namespace-to-nil (state fun)
+(defun with-namespace-to-nil (fun state)
   "Remove current namespace state for function duration."
   (with-slots (namespaces write-namespace load-lib-actions) state
     (let ((save-namespaces namespaces) ;Flip namespace data back and forth.
@@ -107,13 +107,13 @@
       (setf namespaces save-namespaces)
       (setf write-namespace save-write-namespace))))
 
-(defun with-namespace (with state fun)
+(defun with-namespace (with fun state)
   "Adds namespace, does function, goes back to previous state.
 Returns function result."
   (with-slots (namespaces write-namespace) state
     (let ((write-was write-namespace))
-      (setf write-namespace with)
-      (push with namespaces)
+      (setf write-namespace with-namespace)
+      (push with-namespace namespaces)
       (let ((out (funcall fun)))
 	(setf write-namespace write-was)
 	(pop namespaces)

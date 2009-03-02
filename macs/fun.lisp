@@ -19,8 +19,7 @@
 (in-package #:lang)
 
 (defun function-creator (out-name code type-of &key state)
-  "Creates functions. (Used in lang functions flet, defun and lambda.)"
-  (with-fun-resolve
+  "Creates functions. (Used in lang macros flet, defun and lambda.)"
   (let ((name (car code)) (rest (cdr code)) only-record
 	got-flags)
   ;See if there are any relevant markers.
@@ -43,7 +42,8 @@
 		       (let ((tmp (car body)))
 			 (setf- cdr body) tmp)))
 	    (res (unless only-record
-		   (resolve `(progn-raw ,@body) (append type-of args))))
+		   (fun-resolve `(progn-raw ,@body) (append type-of args)
+			    :state state)))
 	    (arg-types
 	     (loop for a in args
 		collect (if (listp a) (cadr a) `(,a (any)))))
@@ -63,9 +63,14 @@
 			  :type `(function ,(if only-record '(error)
 					      (out-type(car res)))
 					   ,@arg-types))
-	   ,fun))))))
+	   ,fun)))))
 
 (rawmac-add defun (:code code) () (name &rest stuff)
+  "Defines a function. usage:
+ (defun [name] [keywords] ([argument-type-pairs]) [documentation-string]\
+ [body])
+If name is (set name) instead it describes how to set something, first 
+argument is what it sets to."
   (cond
     ((listp name)
      (unless (eql (car name) '|set|)
@@ -76,22 +81,22 @@
      (function-creator 'defun (cdr code) type-of :state state))))
 
 (rawmac-add set () () (what to)
-  (with-fun-resolve
-    (let ((to   (resolve to type-of)))
-      (cond
-	((symbolp what)
-	 (let ((what (value-resolve what type-of :state state)))
-	   (unless (type-coarser (out-type what) (out-type to) :state state)
-	     (error "Trying to set a variable to something it is not \
+  "Set variables, references and settable functions."
+  (let ((to   (fun-resolve to type-of)))
+    (cond
+      ((symbolp what)
+       (let ((what (value-resolve what type-of :state state)))
+	 (unless (type-coarser (out-type what) (out-type to) :state state)
+	   (error "Trying to set a variable to something it is not \
 general enough for."))
-	   `(,(make-instance 'out :name 'set) ,what ,to)))
-	((listp what)
-	 (values `(,(intern (format nil "set_~D" (car what)))
-		    ,to ,(cdr what))
-		 :again))
-	(t
-	 (error "Set Only works with set_ functions and symbols, not \
-macros."))))))
+	 `(,(make-instance 'out :name 'set) ,what ,to)))
+      ((listp what)
+       (values `(,(intern (format nil "set_~D" (car what)))
+		  ,to ,(cdr what))
+	       :again))
+      (t
+       (error "Set Only works with set_ functions and symbols, not \
+macros.")))))
 
 (rawmac-add will-defun () () (name out-type &rest arg-types)
   "Allows you to tell a function that you will define in the future.
@@ -131,27 +136,28 @@ specialized to fit the argument types. (Produces error if it doesnt exist.)"
   `(,sym ,@arguments))
 
 (rawmac-add funcall () ((any)) (function &rest arguments)
-  (with-fun-resolve
-    (let ((fun  (resolve function type-of))
-	  (out-type (out-type fun))
-	  (args (loop for a in arguments collect (resolve a type-of))))
-      (cond ;Constant funcalls are done with the actual function.
-	((not (listp out-type))
-	 (error "Generic types not supported yet.\
+  (let ((fun  (fun-resolve function type-of :state state))
+	(out-type (out-type fun))
+	(args (loop for a in arguments
+		 collect (fun-resolve a type-of :state state))))
+    (cond ;Constant funcalls are done with the actual function.
+      ((not (listp out-type))
+       (error "Generic types not supported yet.\
  Also, this should end up of type (adapt-function (symbol)) or more\
  specific."))
-      ;See if the function matches.
-	((function-match (loop for a in args collect (out-type a))
-			 (cddr out-type) :state state)
-	 `(,(make-instance 'out :name 'funcall :type (cadr out-type))
-	    ,fun ,@args))
-	(t
-	 (error "Funcall called with nonmatching argument types with\
- function type."))))))
+    ;See if the function matches.
+      ((function-match (loop for a in args collect (out-type a))
+		       (cddr out-type) :state state)
+       `(,(make-instance 'out :name 'funcall :type (cadr out-type))
+	  ,fun ,@args))
+      (t
+       (error "Funcall called with nonmatching argument types with\
+ function type.")))))
 
 (rawmac-add flet () () ((&rest fundefs) &rest body)
+  "Make multiple functions available in body."
   (with-slots (namespaces write-namespace) state
-  ;Trick is to but it in a namespace but one that is not written to.
+   ;Trick is to but it in a namespace but one that is not written to.
     (setf write-namespace (gen-c-name state))
     (push write-namespace namespaces)
     (let ((funs ;Now make the functions.
@@ -167,4 +173,30 @@ specialized to fit the argument types. (Produces error if it doesnt exist.)"
 	 ,res ,funs))))
 
 (mac-add flet1 () () ((fundef) &rest body)
+  "Make single function available in body."
   `(flet ((,fundef)) ,@body))
+
+(mac-add hard-defun () () (name (&rest arg-types) out-type
+			   &key |:flags| |:c-name| |:make-fun| |:arg-names|
+			   |:doc-str|)
+  "Adds a function that is implemented in conversion to final language."
+  (fun-add name arg-types item :out-type out-type
+	   :flags (cons :hard (loop for f in |:flags|
+				 collect
+				   (case f
+				     (|:chase-args| :chase-args)
+				     (t f))))
+	   :c-name |:c-name|)
+  (unless |:make-fun|
+    (unless arg-names
+      (setf arg-names (loop for a in arg-types
+			 collect (gen-c-name state))))
+    ;Makes the actual function, for a passable pointer.
+    (fun-resolve 
+     `(defun ,(intern (format nil "-lang-hard-~D" name))
+	  (,@(loop for an in arg-names
+		   for a in arg-types
+		collect `(,an ,a)))
+	,@(if-use doc-str)
+	(,name ,@arg-names))
+     nil :state state)))

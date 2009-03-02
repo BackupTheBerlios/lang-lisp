@@ -28,7 +28,7 @@
 
 (evalm str sum "progn 50.9")
 
-(evalm str c "progn-raw (defun name ((x (any))) x)")
+(evalm str c "progn (defun name ((x (any))) x)")
 
 (evalm str c "progn-raw
   (do-times (const 3) (i) i)")

@@ -1,0 +1,166 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+   <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+
+<title>Theorems used in Lang-lisp</title> </head><body>
+<table><tr height=10%>
+
+<table>
+    <td width="20%"></td>
+    <td width="20%"><big><h1>Lang-lisp project page</h1></big></td>
+</table>
+</tr><tr height=90%><table><td width=20% valign="top">
+
+<big>
+  <h3>Contents</h3>
+  <ul>
+    <li><a href="main.html" target="showframe">Main page</a></li>
+    <li><a href="explanation.html" target="showframe">Purpose</a></li>
+    <li><a href="stages.html" target="showframe">Stages of development</a></li>
+    <li><b>Download</b>
+      <ul><li><a href="https://developer.berlios.de/git/?group_id=10613" target="showframe">Git repository</a></li>
+        <li><a href="http://download.berlios.de/gitdumps/lang-lisp-git.tar.gz" target="showframe">Daily tarball</a></li>
+	<li><a href="https://git.berlios.de/cgi-bin/gitweb.cgi?p=lang-lisp;a=summary" target="showframe">Git activity; commits</a></li>
+      </ul>
+    </li>
+    <li><a href="license.html" target="showframe">License</a></li>
+    <li><a href="about.html" target="showframe">About/Contact</a></li>
+  </ul>
+</big>
+<small>Last update March 1 2009</small>
+
+<hr />
+<table>
+  <td><big>Hosted by</big></td>
+  <td>
+    <a href="http://developer.berlios.de" target="showframe">
+      <img src="http://developer.berlios.de/bslogo.php?group_id=10613" width="124" height="32" border="0" alt="BerliOS Logo" /></a> 
+      </td>
+</table>
+</td><td width=80%>
+
+<h1>Disclaimer</h1> <big>i haven't 
+double checked the proofs, or checked if i typed them in correctly.</big>
+
+<h1>Proofs</h1>
+Here i will prove some things used in Lang. 
+<ul type="none">
+  <li><a href="#List_ordering">A method of ordering lists</a>
+    <ul type="none">
+      <li><a href="#List_ordering_used">Usage on types.</a></li>
+    </ul>
+  </li>
+</ul>
+
+<h2>Orderedness of types</h2>
+The types need to be ordered in order to choose types in overloading
+ consistently.
+
+<h3>For the list</h3>
+<h4><u>Definition</u>: A list</h4>
+A list is an object with a function
+   <b>#:List(Item), integer&gt =0 &rarr;  Item</b>
+ written as </b>list#n</b>, returning the n'th object.
+
+<h3>Some things about the order</h3>
+For the order functions, i will use &lt,&gt,&ge;,&le as regularly used.
+
+<h4><u>Definition</u>: Ordering function</h4>
+<p>An binary function > is ordered <b>iff</b> all these clauses true:
+<ol>
+  <li><b>x&gt;y &cap; y&gt;z =&gt; x&gt;z</b></li>
+  <li<b>x=y =&gt &not; x &gt y</b></li>
+  <li><b>x&gt;y =&gt &not; x&le y</b></li>
+</ol>
+Note that follows that also: <b>x&gt;y =&gt &not; x&lt;y</b>.</p>
+<p>Note that the following does <b>not</b> need to be true:
+<b><ul type="none">
+    <li>Necessarally either x&ge;y or x&le;y</li>
+</ul></b>
+For our type system, this means that the types are neither more specific,
+(finer) nor more general(coarser) respective to each other.
+</p>
+
+<h4>Integer ordering</h4>
+For convenience i shall consider integers to be 
+'<b>Integers = Integers &cup; {&infin}</b>'. The function 
+<b>min</b> shall return <b>&infin</b> if none found.
+<b>&lt,&gt,&ge;,&le</b> shall respond to it as you would expect.
+
+<h4><u>Corrolary</u>: Adding an equality.</h4>
+If <b>U</b> has an ordering &gt;, and <b>V</b> has an equality, then:
+<b>&gt;: U,V &rarr; Boolean</b> defined as
+<b>(xu,xv)&gt;(yu,yv) = xu&gt;yu &cap xv=yv</b> Is also an ordering.
+<b><u>Proof</u></b><br />
+In each of the clauses the equality is always there, and the rest is 
+determined by the ordering on <b>U</b>. &diams;
+
+<a name="List_ordering"><h3><u>Proposition</u>: Method ordering a list</h3></a>
+<p>If the elements of a lists have an ordering function, the following
+can is an ordering function:</p>
+
+<p><b>&gt : List(Item-A), List(Item-B) &rarr;  Boolean</b></p>
+
+<p><b>(x &gt y) = (min({n| x#n &gt y#n})&lt min({n| x#n &lt y#n}))</b></p>
+
+<p><big><b><u>Proof</u></b></big></p>
+
+<p>For convenience, let <b>f(x,y)= min({n| x#n &gt y#n})</b></p>
+
+<p>Clause 2: <b>x=y =&gt &forall; n: x#n=y#n =&gt 
+    &forall; n &not; x#n>y#n =&gt &not; x&gt y</b></p>
+<p>Clause 3: <b>x&gt y &lt=&gt f(x,y)&lt f(y,x) &lt=&gt 
+  not f(x,y) =&gt f(y,x) &lt=&gt not x &le y</b></p>
+
+<p>Clause 1: Let <b>x &gt y &cap; y &gt z =&gt x &gt z</b> then:<br />
+  <b>min({n| z#n &gt x#n}) &ge; min({n| x#n &gt y#n &cap; y &gt z})
+  &ge; min({n| x#n &gt y#n &cup; y#n &gt z#n}) =<br />
+  min({n| &not;( x#n &le y#n &cap; y#n &le z#n )})
+  &ge; min({n| &not; x &ge; z}) = min({n| x &lt z}) <br />
+  &lt=&gt x &gt z
+&diams;</p>
+
+<a name="List_ordering_used"><h2>Usage in types</h2></a>
+<p>A list of types is ordered by coarseness and preference with
+ the method with the list elements being types. If is an ordering in a tree,
+ not an ordering in a list; there are elements that are neither coarser nor
+ finer. (But proofs here only worry about that it is ordered.)</p>
+
+<h3>Basic types</h3>
+Types are ordered by:
+<ul>
+  <li>When a list:
+    <ul>
+      <li>Neither <b>&lt</b> nor <b>&gt</b> if the first elements do not
+	equal.</li>
+      <li>The rest of the list is ordered by using the method with the type
+	ordering again.</li>
+    </ul>
+    Using the list ordering method and the corrolary of adding an equality,
+    we know this is ordered.
+  </li>
+  <li>When a symbol, the value of the 'smaller' argument looked at:
+    <ul>
+      <li>If seen the symbol before, then if the registered information at 
+	it must be equal, otherwise return false; no match.</li>
+      <li>If not seen symbol before, register the 'smaller' what argument 
+	gives for it.</li>
+    </ul>
+    TODO is this ordered? Is it equality addition on the run?
+  </li>
+</ul>
+</p>
+
+<h3>Manual manipulation changing type-coarseness.</h3>
+TODO when does it preserve orderedness? Prove handy rules.
+
+<hr />
+<table><tr><td width="80%"></td>
+    <td><big>Hosted by</big></td>
+    <td>
+      <a href="http://developer.berlios.de">
+	<img src="http://developer.berlios.de/bslogo.php?group_id=10613" width="124" height="32" border="0" alt="BerliOS Logo" /></a> 
+    </td>
+</tr></table>
+
+</td></table></tr></table></body></html>

@@ -36,5 +36,3 @@
     (error "(langs fault)Something must have gone wrong in typeset."))
   (with-namespace-to-nil state
     (lambda () (load-file (symbol-name symbol) state)))) ;Read the file.
-
-

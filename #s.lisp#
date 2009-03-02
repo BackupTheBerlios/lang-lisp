@@ -26,7 +26,7 @@
 
 (print 'a)
 
-(evalm str sum "progn 50.9")
+(evalm str c "progn 50.9")
 
 (evalm str c "progn-raw (defun name ((x (any))) x)")
 

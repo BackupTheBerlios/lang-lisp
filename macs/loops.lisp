@@ -22,10 +22,9 @@
 (rawmac-add raw-while () () (cond &rest body)
   "Same as while, but no optional returing of value. Made it so that\
  conversion is easier."
-  (with-fun-resolve
-    `(,(make-instance 'out :name 'while :type '(void))
-       ,(resolve cond type-of)
-       ,(resolve `(progn-raw ,@body) type-of))))
+  `(,(make-instance 'out :name 'while :type '(void))
+     ,(fun-resolve cond type-of)
+     ,(fun-resolve `(progn-raw ,@body) type-of)))
 
 (mac-add while () () ((cond &optional return) &rest body)
   "Does something while condition true."

@@ -62,8 +62,7 @@
 (load "types/any.lisp")
 (load "types/eql.lisp")
 (load "types/numbers.lisp")
-(load "types/ptr.lisp")
-(load "types/ref.lisp")
+(load "types/pointers.lisp")
 
 
 

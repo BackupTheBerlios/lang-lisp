@@ -32,26 +32,35 @@ Nil if it doesn't recognize it." ;TODO put in proper file.
    (parse-integer str :junk-allowed t)))
 
 ;Previous function is needed for this one.
-(defun eval-getstr-code (getstr)
-  "Gets code from a series of strings, obtained with (funcall getstr)."
-  (flet ((eql-curry (with)
-	   (lambda (sym) (eql sym with))))
-    (tokenlist-make-tree
-     (let ((str ""))
-       (loop while (setf str (funcall getstr))
-	  append (tokenize-str str
-		   :wrap (lambda (tok k)
-			   (declare (ignorable k))
-			   (if-use (parse-number tok) (intern tok)))
-	           :except (list #\( #\) #\; #\|))))
-     :list-open (eql-curry '|(|) :list-close (eql-curry '|)|)
-     :sep (eql-curry '|;|) :sep-stop (eql-curry '|\||)
-     :comment-start (eql-curry '|/*|) :comment-stop (eql-curry '|*/|)
-     :next-lister (eql-curry '|'|))))
+;(defun eval-getstr-code (getstr &optional (first-str ""))
+;  "Gets code from a series of strings, obtained with (funcall getstr)."
+;  (flet ((eql-curry (with)
+;	   (lambda (sym) (eql sym with))))
+;    (tokenlist-make-tree
+;     (let ((str ""))
+;       (loop while (setf str (funcall getstr))
+;	  append (tokenize-str str
+;		   :wrap (lambda (tok k)
+;			   (declare (ignorable k))
+;			   (if-use (parse-number tok) (intern tok)))
+;	           :except (list #\( #\) #\; #\|))))
+;     :list-open (eql-curry '|(|) :list-close (eql-curry '|)|)
+;     :sep (eql-curry '|;|) :sep-stop (eql-curry '|\||)
+;     :comment-start (eql-curry '|/*|) :comment-stop (eql-curry '|*/|)
+;     :next-lister (eql-curry '|'|))))
+
+(defun eval-getstr-code (getstr &optional (first-str ""))
+  (multiple-value-bind (final-str ret)
+      (read-lisp getstr first-str
+	(lambda (obj)
+	  (cond
+	    ((stringp obj) (if-use (parse-number obj) (intern obj)))
+	    (t		obj))))
+    ret))
 
 (defun eval-str-code (str)
   "Evaluate string to produce code."
-  (eval-getstr-code (lambda () (let ((out str)) (setf str nil) out))))
+  (eval-getstr-code (lambda () "") str))
 
 (defun eval-stream-code (stream)
   "Read from stream, and evaluate to produce code."
@@ -98,6 +107,8 @@ Nil if it doesn't recognize it." ;TODO put in proper file.
     (t
      input))))
 
+;;TODO hrmm.. what about that xml thing, and the simple macro expander?
+;; need a more arbitrary approach or am i overcomplicating?
 (defmacro evalm (from to arg &rest keys)
   "Evaluates from some point to another, better use this instead
 of the functions."

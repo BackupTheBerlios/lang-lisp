@@ -28,16 +28,15 @@
 	    (list add-tp))))))
 
 (rawmac-add cond () () (&rest clauses)
-  (with-fun-resolve
-    (let (cond-res body-res body-type)
-      (dolist (c clauses) ;Resolve them.
-	(push (resolve (car c) type-of) cond-res)
-	(push (resolve `(progn ,@(cdr c)) type-of) body-res)
-	(setf- type-add-to-or body-res (out-type (car body-res))))
-      `(,(make-instance 'out :type `(or ,@body-type))
-	,@(loop for c in cond-res
-	        for b in body-res
-	    collect `(,c ,b))))))
+  (let (cond-res body-res body-type)
+    (dolist (c clauses) ;Resolve them.
+      (push (fun-resolve (car c) type-of :state state) cond-res)
+      (push (fun-resolve `(progn ,@(cdr c)) type-of :state state) body-res)
+      (setf- type-add-to-or body-res (out-type (car body-res))))
+    `(,(make-instance 'out :type `(or ,@body-type))
+       ,@(loop for c in cond-res
+	    for b in body-res
+	    collect `(,c ,b)))))
 
 (mac-add if () () (question yes no)
   `(cond (,question ,yes) (true ,no)))

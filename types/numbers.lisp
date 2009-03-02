@@ -28,6 +28,7 @@
 		       (list ',s first second)
 		       (list ',s first (append (list ',s second) rest)))
 		   :defer-to-fun)))))
+
 (defmacro inverse-binary-fun-allow-rest (inverse non-inverse)
   `(mac-add ,inverse () () (first second &rest rest)
      (values (if (null rest)
@@ -36,7 +37,7 @@
 		     (append (list ',non-inverse second) rest)))
 	     :defer-to-fun)))
 
-;;Number types large enough for eachother are compatible.
+;;Number types large enough for each other are compatible.
 (setf (fun-state-manual-type-coarser *state* '|number|)
       (lambda (type compare-type state vars)
 	(when (when (and (listp type) (listp compare-type))
@@ -103,7 +104,7 @@
 	       (x) (* x x)) '())
 
 ;And bitmask/integer-only stuff.
-(binary-fun-allow-rest (|\|| |\|\|| & &&))
+(binary-fun-allow-rest (|bit-or| |or| & &&))
 (inverse-binary-fun-allow-rest % *)
 
 (mac-add ~ () () (&rest rest)
@@ -117,29 +118,18 @@
       (len (length integers)))
   (loop for i from 0 upto (- len 1) do
   (loop for j from 0 upto (- len 1) do
-    (dolist (s '(|\|| |\|\|| & && %))
-      (fun-add s `(,(nth i integers) ,(nth j integers)) ()
+    (dolist (s '((|bit-or| |\||) (|or| |\|\||) & && %))
+      (fun-add (if (listp s) (car s) s)
+	       `(,(nth i integers) ,(nth j integers)) ()
+	:c-name (when (listp s) (cadr s))
 	:out-type (nth (min i j) integers) :flags '(:c-binary-fun)))))
   (dolist (el integers)
     (fun-add '~ `(,el) () :out-type el)
     (fun-add '! `(,el) () :out-type el)))
 
-(fun-resolve '(|progn| ;Synonyms.
-	       (|defun| |bit-or|  |:inline| |:only-record| (a b)
-		(|\|| a b))
-	       (|defun| |bit-and| |:inline| |:only-record| (a b)
-		(& a b))
-	       (|defun| |bit-not| |:inline| |:only-record| (a b)
-		(~ a b))
-	       (|defun| |int-or|  |:inline| |:only-record| (a b)
-		(|\|\|| a b))
-	       (|defun| |int-and| |:inline| |:only-record| (a b)
-		(&& a b))
-	       (|defun| |int-not| |:inline| |:only-record| (a b)
-		(! a b))
-	       (|defun| |mod| |:inline| |:only-record| (a b)
-		(% a b))
-	       ;TODO extension of |%| to |float| and |double|.
-	       ;NOTE maybe do via math.h's modf.
-	       )
-	     nil)
+(evalm str res "progn-raw
+	       (defun bit-and :inline :only-record (a b) (&  a b))
+	       (defun bit-not :inline :only-record (a b) (~  a b))
+	       (defun int-and :inline :only-record (a b) (&& a b))
+	       (defun int-not :inline :only-record (a b) (!  a b))
+	       (defun mod     :inline :only-record (a b) (%  a b))")

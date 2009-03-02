@@ -34,7 +34,7 @@
 (rawmac-add load-lib () ((eql (symbol (any)))) ((quote symbol))
   (unless (eql quote 'quote)
     (error "(langs fault)Something must have gone wrong in typeset."))
-  (with-namespace-to-nil state
-    (lambda () (load-file (symbol-name symbol) state)))) ;Read the file.
+  (with-namespace-to-nil
+      (lambda () (load-file (symbol-name symbol) state)))) ;Read the file.
 
 

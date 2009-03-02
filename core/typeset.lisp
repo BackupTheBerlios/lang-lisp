@@ -16,6 +16,7 @@
 ;;  You should have received a copy of the GNU Affero General Public License
 ;;  along with Lang.  If not, see <http://www.gnu.org/licenses/>.
 ;;
+
 ;;TODO update doc strings, and comments.
 ;;TODO state is passed on everywhere, is it good? Remember, namespace has to
 ;;work too!
@@ -32,86 +33,9 @@
 (defclass top-typeset (typeset)
   ((exact-hash :initform (make-hash-table :test 'equalp))))
 
-(defun type-coarser (type specific &key (state *state*) (vars (list nil))
-		     no-conversion)
-  "function-match for a single argument."
-  (cond
-   ;Symbols that are not first in list are variables to first 
-   ;which type it is. '(any) is unnamed arbitrary.
-    ((symbolp type) ;See if correct, or first appearance.
-     (if-with got (assoc type (car vars))
-       (equalp (cadr got) specific)
-       (progn (push (list type specific) (car vars))
-	      t)))
-   ;Can manually manipulate to make things more/less general.
-    ((loop for coarser-fun in (slot-value state 'manual-type-coarser)
-	when (funcall coarser-fun type specific state vars)
-	return t)
-     t)
-    ((not (listp specific))
-     nil)
-   ;Look for conversion functions. (They imply generality.)e
-;    ((unless no-conversion
-;       (typeset-get (slot-value state 'conversion)
-;		    (list (cadr specific) type) :state state))
-;     t)
-   ;Any type not a list nor a symbol is a problem, 
-    ((not (listp type))
-     (error "Types should be lists or symbols.")
-     nil)
-    ;Numbers, integers, etc. are checked for precise equality.
-;TODO eql* also checks for variable numbers? (Code for that elsewhere.)
-    ((eql (car type) (car specific))
-     (when (= (length type) (length specific))
-       (not (loop for fatp in (cdr type)
-	          for tp in (cdr specific)
-	       unless (type-coarser fatp tp :state state :vars vars
-				    :no-conversion no-conversion)
-	       return t))))
-    (t nil)))
-
-;;TODO how to make and, or?
-(defun type-list-coarser (general specific &key (state *state*)
-			  (vars (list nil)) no-conversion)
-  "Determines whether the given list of types is such that it can be used 
-to form the argument of the function."
-  (when (= (length general) (length specific))
-    (not (loop for g   in general
- 	       for s in specific
-	    unless (type-coarser g s :state state :vars vars
-				     :no-conversion no-conversion)
-	    return t))))
-
 (defun typeset-coarser (typeset specific &key (state *state*) no-conversion)
   (type-list-coarser (arg-types typeset) (arg-types specific)
 		     :state state :no-conversion no-conversion))
-
-(defun type-eql (type-a type-b &key (state *state*))
-  "Tests if two types are equal."
-  (cond
-    ((symbolp type-a)
-     (symbolp type-b))
-    ((not (and (listp type-a) (listp type-b)))
-     (eql type-a type-b))
-    ((and (eql (car type-a) (car type-b))
-	  (= (length type-a) (length type-b)))
-     (not(loop for tp-a in (cdr type-a)
-	       for tp-b in (cdr type-b)
-	    unless (type-eql tp-a tp-b :state state)
-	    return t)))))
-
-(defun type-list-eql (types-a types-b &key (state *state*))
-  (when (and (= (length types-a) (length types-b))
-	     (not (loop for tp-a in types-a
-		        for tp-b in types-b
-		     unless (type-eql tp-a tp-b :state state)
-		     return t)))
-    (if (and (type-list-coarser types-a types-b :state state)
-	     (type-list-coarser types-b types-a :state state))
-	t
-	(error (format nil
-		 "(langs fault)Type equality should imply coarser \
-both ways. ~D ~D" types-a types-b)))))
 
 (defun typeset-eql (typeset-a typeset-b &key (state *state*))
   (type-list-eql (arg-types typeset-a) (arg-types typeset-b) :state state))

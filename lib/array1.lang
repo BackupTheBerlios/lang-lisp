@@ -17,6 +17,10 @@
 ;;  along with Lang.  If not, see <http://www.gnu.org/licenses/>.
 ;;
 
+
+(hard-defun arr-ptr ((array1 (eql(integer n)) item)) (ptr item)
+  :flags (:chase-args))
+
 (struct array1 (len-cntr item-tp) |
   len len-cntr;
   items (ptr item-tp);)

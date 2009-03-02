@@ -7,7 +7,7 @@
 
 <table>
     <td width="20%"></td>
-    <td width="20%"><h1>Lang-lisp project page</h1></td>
+    <td width="20%"><big><h1>Lang-lisp project page</h1></big></td>
 </table>
 </tr><tr height=90%><table><td width=20% valign="top">
 
@@ -27,7 +27,7 @@
     <li><a href="about.html" target="showframe">About/Contact</a></li>
   </ul>
 </big>
-<small>Last update Feb 21 2009</small>
+<small>Last update March 1 2009</small>
 
 <hr />
 <table>
@@ -40,13 +40,13 @@
 </td><td width=80%>
 
 <h2>Unit tests for the Core development stage</h2>
-<p>I will only unit test things if the test does not constitute reimplementing it. Also should the
-tested thing not be too simple. Good things to test are functions of which there is another function
+<p>I will only unit test things if the test does not constitute reimplementing it. Also the thing 
+tested should not be too simple. Good things to test are functions of which there is another function
 that should be its inverse, and structures on which there are demands on what its state is like.</p>
 
 <h3>Type getting/setting tests</h3>
 <p>After setting a bunch of types, subsequent getting should get things correctly. Should also 
-try getting less specific types then exist. It should work regardless of use-hash is on or off.
+try getting less specific types then exist. It should work regardless if use-hash is on or off.
 Perhaps should also include special types, but this might be inpractical. The resulting state
  of the structure holding the types should forfill its state correctness. 
 Where <b>state correctness</b> is the following:</p>
@@ -86,8 +86,8 @@ returning type of the whole.</p>
 and then read it back, and check if the two are equal.</p>
 
 <h4>Current state</h4>
-<p>Worked last time i checked, but if i improve the reader code i will have to recheck. Adding some 
-variation(Extra whitespace) to the writer might make the test more complete.</p>
+<p>The text succeeds, but is only partial; doesn't check separators and some other features. Not
+sure if it is needed to fully be tested.</p>
 
 <h3>Test of argument-postioner.lisp</h3>
 <p>Automatically make arguments, fill them and see if the result matches.</p>

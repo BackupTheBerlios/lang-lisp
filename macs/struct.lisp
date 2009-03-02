@@ -96,10 +96,10 @@
 		 sum (size-of (cadr el) with-el state))
 	      found-el))))
 
-(defun get-with-el (type typespec)
-  "Gets an assoc list with type by struct-argument."
+(defun get-struct-args (type structspec)
+  "Gets an assoc list with type by struct argument name."
   (loop for fill-arg in (cdr type)
-        for arg      in (caddr (code typespec))
+        for arg      in (caddr (code structspec))
      collect (list arg fill-arg)))
 
 ;TODO one with non-constant slot name? how about (not(any))?
@@ -119,7 +119,7 @@
 	    (error "Atomic-types don't have slots."))
 	 ;Is a struct, start counting upto our desired element.
 	   (struct-type
-	    (let ((with-el (get-with-el type typespec)))
+	    (let ((with-el (get-struct-args type typespec)))
 	      (multiple-value-bind (struct-shift found-el)
 		  (shift-upto typespec slot-name with-el state)
 		(unless found-el
@@ -143,14 +143,14 @@ Asked for slot ~D in struct ~D." slot-name (car type))))))))
   (declare (ignorable anything))
   (let*((type (out-type(fun-resolve obj type-of :state state)))
 	(typespec
-	 (case (type-of  type)
-	   (symbol type)
-	   (cons   (gethash (car type)
-			    (get-extension-slot state :types 'types))))))
+	 (when (listp type) ;Look for the structure specification.
+	   (gethash (car type)
+		    (get-extension-slot state :types 'types)))))
     (make-instance 'out :name 'size-of
       :type `(eql ,(size-of type
+			  ;When structure, need to get arguments.
 			    (case (type-of typespec)
-			      (struct-type (get-with-el type typespec)))
+			      (struct-type (get-struct-args type typespec)))
 			    state)))))
 
 (rawmac-add struct (:code code) () (name)

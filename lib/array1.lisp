@@ -23,12 +23,11 @@
   "Gets array elements for arrays with (eql (integer n)) length."
   (with-fun-resolve 
    `(,(make-instance 'out :name 'aref-array1-eql :type item)
-      ,(resolve index type-of) ,(fun-resolve array type-of))))
+      ,(resolve index type-of) ,(resolve array type-of))))
 
 (mac-add aref () ((|integer|) (|array| (|integer|) item)) (index array)
   "Getting array elements for non-eql array lengths deferred to functions."
   (values nil :discard))
-
 
 (mac-add array1-do () () ((&rest arrays) (index &rest elements) &rest body)
   "Does body for elements of the array, the minimum of the lengths counts."
@@ -43,8 +42,5 @@
 			    for var in letvar
 			 collect `(,el (ref (aref ,index ,(car var))))))
 		 ,@body)))))))
-
-(fun-add 'arr-ptr '((|array1| (|eql| (|integer| n)) item)) ()
-  :out-type '(ptr item) :flags '(:chase-args))
 
 (load-file "array1.lang")

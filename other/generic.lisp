@@ -81,7 +81,7 @@ WARNING/TODO: abstraction leak if set has sideeffects."
  (optionally)if-f else."
   `(let ((,var ,cond))
     (if ,var ,if-t ,if-f)))
-(defmacro if-use (cond if-f)
+(defmacro if-use (cond &optional if-f)
 "Executes cond, if it returns non-nil, returns it, else returns if-f output."
   (with-gensyms (var)
     `(if-with ,var ,cond ,var ,if-f)))
