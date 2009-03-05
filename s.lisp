@@ -20,7 +20,7 @@
 ;Lang stuff and base lang libraries.
 (load "loader.lisp")
 
-(load "types/var.lisp")
+(load "read/read-c.lisp")
 
 (in-package #:lang)
 
@@ -42,7 +42,7 @@
 ;TODO why does it protest at first? Why going through a raw typeset?
 ;  And in process-code for that matter, that should be (nearly)stateless.
 (evalm str c "progn-raw
-  (defun mah (a (int64); b (int64)) (+ (* a b) b a))" :body-level t)
+  (defun meh (a (int64); b (int64)) (+ (* a b) b a))" :body-level t)
 
 ;Note: this one needs meh
 (evalm str c "progn-raw
@@ -65,3 +65,11 @@
 (type-list-coarser '((any)) '((any)))
 
 (type-list-eql '((any)) '((any)))
+
+
+(in-package #:read-c)
+
+(read-c (lambda()"") "int function(int a, int b);
+const double fun2 ();
+#define lala 4236373" #'print)
+

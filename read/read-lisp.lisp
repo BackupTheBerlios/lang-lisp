@@ -7,10 +7,11 @@
 
 (defun non-symbol (ch)
   "Characters that are not part of symbols."
-  (case ch ((#\Newline #\Space #\Tab #\) #\( #\| #\;) t)))
+  (case ch ((#\Newline #\Space #\Tab #\) #\( #\| #\;
+	    #\, #\`) t)))
 
 (defun clause-add-xml-like (final-add)
-  "Adds a xml-like reading. TODO untested"
+  "Adds a xml-like reading. TODO isn't gonna work currently."
   (lambda (getstr str)
     (let (first rest (stage :first) (n 0))
       (flet ((add-here (added)
@@ -21,7 +22,7 @@
 		  (unless (string= (nth n first) added)
 		    (error "Rep not repeating properly!")
 		    (setf- + n 1))))))
-	(reader str getstr
+	(reader str getstr #'is-whitespace
 	  `(("/*" ,#'clause-comment)
 	    ("//" ,#'clause-line-comment)
 	    (">"  ,(lambda (getstr str)
@@ -52,7 +53,7 @@
 	     (setf (car(last out)) `(,@(car(last out)) ,added))
 	     (setf out             `(,@out ,added)))))
     (let ((newstr
-      (reader str getstr
+      (reader str getstr #'is-whitespace
        `(("/*" ,#'clause-comment) ("//" ,#'clause-line-comment)
 	 ("("  ,(lambda (getstr str)
 		  (multiple-value-bind (newstr add)

@@ -18,105 +18,203 @@
 ;;
 
 (defpackage #:read-c
-  (:use #:common-lisp #:generic #:reader)
-  (:export ))
+  (:use #:common-lisp #:generic #:read)
+  (:export read-c))
 
 (in-package #:read-c)
 
-(defconst *comments* (list ("//" #'read-line-comment) ("/*" #'read-comment)))
+(defun non-symbol (ch)
+  "Characters that are not part of symbols."
+  (case ch ((#\Newline #\Space #\Tab #\) #\( #\| #\;
+	     #\* #\, #\=) t)))
+
+(defun subseq* (str start &optional end)
+  "Subseq without bounds errors."
+  (if (> (length str) start)
+      (subseq str start (if end (min end (length str)) (length str)))
+      ""))
+
+(defun in-the-list (list)
+  (lambda (ch) (in-list list ch)))
+
+(defvar *comments* `(("/*" ,#'clause-comment)
+		     ("//" ,#'clause-line-comment)))
 
 (defun read-c-stuff (getstr &optional (str "") results)
-  "Reads C macro stuff. TODO doesn't do anything like if, etc."
-  (reader str getstr 
+  "Reads C macro stuff. TODO currently only #define"
+  (reader str getstr #'is-whitespace
     `(,@*comments*
       ("#" ,(lambda (getstr str) (error "Two # in sequence.")))
       ("define"
-       ,(lambda (str getstr)
+       ,(lambda (getstr str)
 	  (let ((sym "") (val ""))
-	    (setf- reader str getstr
+	    (setf- reader str getstr #'is-whitespace
 		   `(,@*comments*
-		     ,("" (lambda (getstr str)
-			    (setf sym (get-token str))
-			    (values (subseq* str (length sym)) t)))))
-	    (setf- reader str getstr
+		     ("" ,(lambda (getstr str)
+			    (setf sym (get-token str #'non-symbol))
+			    (values (subseq* str (length sym)) t))))
+		   :limit 100)
+	    (setf- reader str getstr #'is-whitespace
 		   `(,@*comments*
-		     ,("(" (lambda (getstr str)
+		     ("(" ,(lambda (getstr str)
 			     (warn "No support for C functional macros.")))
-		     ,(""  (lambda (getstr str)
-			     (setf val (get-token str))
-			     (values (subseq* str (length val)) t)))))
+		     (""  ,(lambda (getstr str)
+			     (setf val (get-token str #'non-symbol))
+			     (values (subseq* str (length val)) t))))
+		   :limit 100)
 	    (funcall results `(define ,sym ,val))
 	    (values str t))))
-      ("\\" (lambda (str getstr) (if (= (length str) 0)
-				   (funcall getstr) str)))
-      ("" (lambda (str getstr)
-	    (values str :skip-str))))))
+      ("\\" ,(lambda (getstr str)
+	       (if (= (length str) 0)
+	         (funcall getstr) str)))
+      (""   ,(lambda (getstr str)
+	       (error "# stuff error?"))))
+    :limit 100))
 
 (defun read-c (getstr &optional (str "") results)
   "Reads C header files, returns results via callback."
-  (reader str getstr
+  (reader str getstr #'is-whitespace
     `(,@*comments*
-      ("#" ,(lambda (getstr str) (read-c-stuff getstr str results)))
-      (""  ,(lambda (getstr str)
-	      (let ((toklist (list (get-token str))))
+      ("#" ,(lambda (getstr str) ;Macro-like stuff.
+	      (read-c-stuff getstr str results)))
+      ("struct"  ,(read-struct results)) ;Structures without typedef.
+      ("typedef" ,(read-typedef results)) ;Type definitions.
+      (""  ,(lambda (getstr str) ;Functions and values.
+	      (let ((toklist (list)))
 		(flet ((read-tok (getstr str)
-			 (push (get-token str) toklist)
+			 (push (get-token str #'non-symbol) toklist)
 			 (values (subseq* str (length (car toklist)))
 				 t)))
 		  (do ()
 		      ((multiple-value-bind (new-str stop)
-			   (reader str getstr
+			   (reader str getstr #'is-whitespace
 			     `(,@*comments*
 			       ("*" ,(lambda (str getstr)
 				       (push "*" toklist)
 				       str))
 			       ("=" ,(continue-value toklist results))
 			       ("(" ,(continue-function toklist results))
-			       (""  ,#'read-tok)))
+			       (""  ,#'read-tok))
+			     :limit 100)
+			 (setf str new-str)
 			 (case stop
-			   (:done (return new-str)))
-			 (setf str new-str)))))))))))
+			   (:done t)
+			   (t     (= (length str) 0))))
+		       str)))))))
+    :limit 100))
+
+(defun read-struct (results)
+  "Reads a structure. TODO"
+  (lambda (getstr str)
+    (let (name in-body body-elements)
+      (values
+       (reader str getstr #'is-whitespace
+	 `(,@*comments*
+	   ("{",(lambda (getstr str)
+		  (setf in-body t)))
+	   ("}",(lambda (getstr str)
+		  (unless in-body (error "Should be in body for }"))
+		  (funcall results `(struct ,name ,body-elements))
+		  (values str t)))
+	   ("" ,(lambda (getstr str)
+		  (cond
+		    (start-body 
+		     (let (type vars)
+		       (reader str getstr #'is-whitespace
+			 `(,@*comments*
+			   ("}",(lambda (getstr str)
+				  (error "Early }, needed ; first")))
+			   (";",(lambda (getstr str)
+				  (unless vars ;No variables started yet.
+				    ;That one was var.
+				    (setf vars (list(car type))))
+				  (values str t))) ;This type done.
+			   (",",(lambda (getstr str)
+				  (setf vars (list(car type))) ;Start vars.
+				  str))
+			   (""
+			    ,(lambda (getstr str)
+			       (cond
+				 (vars
+				  (push (get-token str #'non-symbol) vars))
+				 (t
+				  (push (get-token str #'non-symbol) type)
+				  (subseq str (length(car type)))))))))
+		      ;Register the read things.
+		       (push `(,(reverse type) ,(reverse vars))
+			     body-elements)))
+		    ((not name) ;Get name of struct.
+		     (setf name (get-token str #'non-symbol))
+		     (subseq* str (length name)))
+		    (t
+		     (error "Structs can only have one name.")))))))
+       nil ;Read by reader.
+       `(struct ,name ,body-elements))))) ;The goods again.
+
+(defun read-typedef (results)
+  "Reads a structure. TODO"
+  (lambda (getstr str)
+    (let (type type-name)
+      (reader str getstr #'is-whitespace
+	`(,@*comments*
+	  ("struct"
+	   ,(lambda (getstr str)
+	       (when type (error "Already have type."))
+	       (multiple-value-bind (new-str ret struct-def)
+		   (funcall (read-struct results) getstr str)
+		 (setf type struct-def)
+		 new-str)))
+	  (""
+	   ,(lambda (getstr str)
+	      (cond
+		(type (setf type-name (get-token str #'non-symbol))
+		      (funcall results `(typedef ,type type-name))
+		      (values (subseq str (length type-name)) t)) ;Done.
+		(t    (setf type (get-token str #'non-symbol))
+		      (subseq str (length type)))))))))))
 
 (defun continue-value (got results)
-  "Continues value-reading."
+  "Continues value-reading. TODO only works if there is a =, doesn't work 
+for multiple values at a time."
   (lambda (getstr str)
     (values
-     (reader str getstr
+     (reader str getstr #'is-whitespace
        `(,@*comments*
 	 (";" ,(lambda (getstr str)
 		 (values str t)))
 	 ("," ,(lambda (getstr str) str))
 	 (""  ,(lambda (getstr str)
-		 (let ((value (get-token str)))
+		 (let ((value (get-token str #'non-symbol)))
 		   (funcall results `(value ,(car got)
 					    (,@(reverse(cdr got)))
-					    ,value)))
-		(subseq* str (length value))))))
-     :stop)))
+					    ,value))
+		   (subseq* str (length value))))))
+       :limit 100)
+     :done)))
 
 (defun continue-function (got results)
-  "Continues function-reading."
+  "Continues function-reading.(Currently only headers!)"
   (lambda (getstr str)
     (values
      (let (one-arg args)
-       (reader str getstr
+       (reader str getstr #'is-whitespace
 	 `(,@*comments*
 	   ("," ,(lambda (getstr str)
 		   (push one-arg args)
 		   (setf one-arg nil)
 		   str))
 	   (")" ,(lambda (getstr str)
+		   (push one-arg args)
 		   (funcall results `(function ,(car got)
 					       (,@(reverse(cdr got)))
-					       (,@args)))
-		   (values (reader str getstr
+					       (,@(reverse args))))
+		   (values (reader str getstr #'non-symbol
 			     `(,@*comments*
-			       (";" (lambda (str getstr) (values str t)))))
+			       (";" (lambda (str getstr) (values str t))))
+			     :limit 100)
 			     t)))
 	   (""  ,(lambda (getstr str)
-		   (push (get-token str) one-arg)
-		   (subseq* str (length (car one-arg))))))))
-     t)))
-
-(defun getstr-stream (stream)
-  (lambda () (read-line stream)))
+		   (push (get-token str #'non-symbol) one-arg)
+		   (subseq* str (length (car one-arg))))))
+	 :limit 100))
+     :done)))

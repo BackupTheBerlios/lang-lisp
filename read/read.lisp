@@ -19,28 +19,43 @@
 
 (defpackage #:read
   (:use #:common-lisp #:generic)
-  (:export get-token first-equal reader
+  (:export get-token first-equal reader getstr-stream is-whitespace
 	   clause-comment clause-line-comment clause-add))
 
 (in-package #:read)
 
+(defun getstr-stream (stream)
+  "A getstr for functions taking one."
+  (lambda () (read-line stream)))
+
 (defun is-whitespace (ch)
   (case ch ((#\Newline #\Space #\Tab) t)))
+
+(defun not-whitespace (ch)
+  (not(is-whitespace ch)))
 
 (defun non-symbol (ch)
   "Characters that are not part of symbols."
   (case ch ((#\Newline #\Space #\Tab #\) #\( #\|) t)))
 
+(defun count-to-stop (str stopchar)
+  (loop for el across str ;Iterate until ending of symbol.
+        for i from 0
+     when (funcall stopchar el)
+     return i))
+
 (defun get-token (str &optional (stopchar #'is-whitespace))
   "Gets a token from a string. Stopchar are characters it stops for, must \
 are characters that must be in there, or it will also stop.
 Returns: the string token, the ending index, the element it stopped at."
-  (if-with i (loop for el across str ;Iterate until ending of symbol.
-		   for i from 0
-		when (funcall stopchar el)
-		return i)
+  (if-with i (count-to-stop str stopchar)
       (values (subseq str 0 i) i (when (< i (length str)) (aref str i)))
       (values str (length str) nil)))
+
+(defun skip-token (str &optional (stopchar (lambda (ch)
+					     (not (is-whitespace ch)))))
+  (if-with i (count-to-stop str stopchar)
+    (subseq str i) ""))
 
 (defun subseq* (str start &optional end)
   "Subseq without bounds errors."
@@ -59,7 +74,7 @@ Returns: the string token, the ending index, the element it stopped at."
 	((characterp eql-to)
 	 (eql (aref str 0) eql-to))))
 
-(defun reader (str getstr clauses &key (whitespace #'is-whitespace))
+(defun reader (str getstr whitespace clauses &key limit)
   "General reading, str is first string, getstr gets subsequent strings as \
 needed, until it returns nil.
 Clauses is pairs of expected words and the functions get the string beyond,
@@ -67,7 +82,8 @@ what these functions return is where reader continues."
   (do ((i 0 (+ i 1))
        (str str (if (= (length str) 0) (funcall getstr) str))
        (stop-now nil stop-now))
-      ((or (> i 100) stop-now (= (length str) 0)) str)
+      ((or (when limit (>= i limit))
+	   stop-now (= (length str) 0)) (values str stop-now))
     (cond
       ((funcall whitespace (aref str 0)) ;Skip whitespace.
        (setf- subseq* str 1))
@@ -107,3 +123,4 @@ line."
     (let ((got (get-token str stop)))
       (funcall add got)
       (subseq str (length got)))))
+

@@ -64,7 +64,6 @@ reference."
 but now you get to treat it as a pointer too."
   :out-type '(|ptr| anything) :c-name 'identity :flags '(:chase-args))
 
-
 (fun-add '|ref| '((|var| anything)) ()
   :doc-str "Reference to a variable; does not do anything, but allows it to 
   automatically reference when there is a reference-only function."
