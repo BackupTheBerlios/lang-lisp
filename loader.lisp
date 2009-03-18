@@ -17,6 +17,8 @@
 ;;  along with Lang.  If not, see <http://www.gnu.org/licenses/>.
 ;;
 
+(require :iterate)
+
 ;Handy macros.
 (load "other/generic.lisp")
 
@@ -24,10 +26,10 @@
 (load "other/argument.lisp")
 
 (load "read/read.lisp")
-(load "read/read-lisp.lisp")
+(load "read/read-lang.lisp")
 
 (defpackage #:lang
-  (:use #:common-lisp #:generic #:argument #:namespace #:read #:read-lisp))
+  (:use #:common-lisp #:generic #:argument #:namespace #:read-lang))
 ;Function and macro to get stuff from a list like a macro.
 
 (in-package #:lang)
@@ -49,7 +51,7 @@
 (load "core/states.lisp")  ;Extensions of the state that macros/output use.
 
 ;Output.(Uses the macros.)
-(load "convert/to-c2.lisp")
+(load "convert/to-c.lisp")
 
 (load "other/chain.lisp")
 (load "other/chain-lang.lisp")
@@ -67,5 +69,23 @@
 (load "types/ptr.lisp")
 (load "types/ref.lisp")
 
-
-
+;;Auto-documentation stuff.
+(defun doc-template-document ()
+  "Automatically documents langs functions with documentation-template."
+  (require :asdf)
+  (asdf:operate 'asdf:load-op :documentation-template)
+  (documentation-template:create-template (find-package '#:lang)
+    :subtitle "The main project."
+    :target "doc/autodoc/dt-lang.html")
+  (documentation-template:create-template (find-package '#:argument)
+    :subtitle "Iteration over arguments like macros take."
+    :target "doc/autodoc/dt-argument.html")
+  (documentation-template:create-template (find-package '#:namespace)
+    :subtitle ""
+    :target "doc/autodoc/dt-argument.html")
+  (documentation-template:create-template (find-package '#:read)
+    :subtitle "Iterate over text files, recognizing strings."
+    :target "doc/autodoc/dt-read.html"))
+;  (documentation-template:create-template (find-package '#:read-c)
+;    :subtitle "Reading C headers."
+;    :target "doc/autodoc/dt-read-c.html"))

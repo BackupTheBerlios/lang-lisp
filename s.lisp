@@ -20,16 +20,11 @@
 ;Lang stuff and base lang libraries.
 (load "loader.lisp")
 
-(load "convert/to-c2.lisp")
-
-(load "read/read-c.lisp")
-
 (in-package #:lang)
-
-(print 'a)
 
 (evalm str c "progn 50.9")
 
+;TODO too much breakage..
 (evalm str res "progn-raw
   (do-times (const 3) (i) i)")
 
@@ -43,7 +38,8 @@
 ;  And in process-code for that matter, that should be (nearly)stateless.
 (evalm str c "progn-raw
   (defun meh (a (int64); b (int64)) (+ (* a b) b a))" :body-level t)
-(evalm str c "progn-raw (defun name ((x (any))) x)")
+;Hmm, doesn't work for to C, does work to summary.
+(evalm str c "progn-raw (defun name (x (any);) x)")
 
 ;Note: this one needs meh
 (evalm str c "progn-raw
@@ -56,18 +52,18 @@
     + a (let ((c (sqr (let ((d a)) (+ b d))))) | * c b;);"
   :body-level t :fun-level t)
 
-(evalm str c "progn-raw
+;TODO to-c must recognize loop-like macros again.
+(evalm str sum "progn-raw
   (let (a 56 ; b 6) |
     while (a) (sqr b);
     |a" :body-level t)
 
+;TODO decrease the ammount of scopes..
 (evalm str c "progn-raw
   (let (a 56;) (let ((ref b) 2;) (+ a b)))" :body-level t)
 
-(type-list-coarser '((any)) '((any)))
 
-(type-list-eql '((any)) '((any)))
-
+(load "read/read-c.lisp")
 
 (in-package #:read-c)
 

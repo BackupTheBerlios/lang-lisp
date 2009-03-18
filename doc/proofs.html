@@ -14,17 +14,17 @@
 <big>
   <h3>Contents</h3>
   <ul>
-    <li><a href="main.html" target="showframe">Main page</a></li>
-    <li><a href="explanation.html" target="showframe">Purpose</a></li>
-    <li><a href="stages.html" target="showframe">Stages of development</a></li>
+    <li><a href="main.html">Main page</a></li>
+    <li><a href="explanation.html">Purpose</a></li>
+    <li><a href="stages.html">Stages of development</a></li>
     <li><b>Download</b>
-      <ul><li><a href="https://developer.berlios.de/git/?group_id=10613" target="showframe">Git repository</a></li>
-        <li><a href="http://download.berlios.de/gitdumps/lang-lisp-git.tar.gz" target="showframe">Daily tarball</a></li>
-	<li><a href="https://git.berlios.de/cgi-bin/gitweb.cgi?p=lang-lisp;a=summary" target="showframe">Git activity; commits</a></li>
+      <ul><li><a href="https://developer.berlios.de/git/?group_id=10613" >Git repository</a></li>
+        <li><a href="http://download.berlios.de/gitdumps/lang-lisp-git.tar.gz" >Daily tarball</a></li>
+	<li><a href="https://git.berlios.de/cgi-bin/gitweb.cgi?p=lang-lisp;a=summary" >Git activity; commits</a></li>
       </ul>
     </li>
-    <li><a href="license.html" target="showframe">License</a></li>
-    <li><a href="about.html" target="showframe">About/Contact</a></li>
+    <li><a href="license.html">License</a></li>
+    <li><a href="about.html">About/Contact</a></li>
   </ul>
 </big>
 <small>Last update March 1 2009</small>
@@ -33,7 +33,7 @@
 <table>
   <td><big>Hosted by</big></td>
   <td>
-    <a href="http://developer.berlios.de" target="showframe">
+    <a href="http://developer.berlios.de">
       <img src="http://developer.berlios.de/bslogo.php?group_id=10613" width="124" height="32" border="0" alt="BerliOS Logo" /></a> 
       </td>
 </table>
@@ -75,7 +75,7 @@ For the order functions, i will use &lt,&gt,&ge;,&le as regularly used.
 Note that follows that also: <b>x&gt;y =&gt &not; x&lt;y</b>.</p>
 <p>Note that the following does <b>not</b> need to be true:
 <b><ul type="none">
-    <li>Necessarally either x&ge;y or x&le;y</li>
+    <li>Necessarilly either x&ge;y or x&le;y</li>
 </ul></b>
 For our type system, this means that the types are neither more specific,
 (finer) nor more general(coarser) respective to each other.
@@ -88,7 +88,7 @@ For convenience i shall consider integers to be
 <b>&lt,&gt,&ge;,&le</b> shall respond to it as you would expect.
 
 <h4><u>Corrolary</u>: Adding an equality.</h4>
-If <b>U</b> has an ordering &gt;, and <b>V</b> has an equality, then:
+If <b>U</b> has an ordering &gt;, and <b>V</b> has an equality, then:a
 <b>&gt;: U,V &rarr; Boolean</b> defined as
 <b>(xu,xv)&gt;(yu,yv) = xu&gt;yu &cap xv=yv</b> Is also an ordering.
 <b><u>Proof</u></b><br />
@@ -113,10 +113,10 @@ can is an ordering function:</p>
   not f(x,y) =&gt f(y,x) &lt=&gt not x &le y</b></p>
 
 <p>Clause 1: Let <b>x &gt y &cap; y &gt z =&gt x &gt z</b> then:<br />
-  <b>min({n| z#n &gt x#n}) &ge; min({n| x#n &gt y#n &cap; y &gt z})
+  <b>min({n| z#n &gt x#n}) &ge; min({n| x#n &gt y#n &cap; y#n &gt z#n})
   &ge; min({n| x#n &gt y#n &cup; y#n &gt z#n}) =<br />
   min({n| &not;( x#n &le y#n &cap; y#n &le z#n )})
-  &ge; min({n| &not; x &ge; z}) = min({n| x &lt z}) <br />
+  &ge; min({n| &not; x#n &ge; z#n}) = min({n| x#n &lt z#n}) <br />
   &lt=&gt x &gt z
 &diams;</p>
 

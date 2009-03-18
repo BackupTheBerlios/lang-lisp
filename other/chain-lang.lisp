@@ -75,8 +75,7 @@ Nil if it doesn't recognize it." ;TODO put in proper file.
   (let ((more-on-fun (getf rest :more-on-fun))
 	(more-on-mac (getf rest :more-on-mac)))
   (flet ((summary (sub-input)
-	   (eval-res-sum sub-input
-		    :more-on-fun more-on-fun ::more-on-mac more-on-mac)))
+	   (evalm res sum sub-input)))
   (case (type-of input)
     (cons
      (loop for el in input collect

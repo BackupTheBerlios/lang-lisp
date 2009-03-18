@@ -1,9 +1,9 @@
 
-(defpackage #:read-lisp
+(defpackage #:read-lang
   (:use #:common-lisp #:generic #:read)
   (:export read-lisp clause-add-xml-like))
 
-(in-package #:read-lisp)
+(in-package #:read-lang)
 
 (defun non-symbol (ch)
   "Characters that are not part of symbols."
@@ -62,7 +62,7 @@
 		      (read-lisp getstr str symbol-process)		    
 		    (add-out add)
 		    newstr)))
-	 ("<:" ,(clause-add-xml-like #'add-out))
+	 ("<:" ,(clause-add-xml-like #'add-out)) ;;TODO will it work?
 	 (")"  ,(lambda (getstr str)
 		  (declare (ignorable getstr))
 		  (values str t)))
