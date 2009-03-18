@@ -23,7 +23,9 @@
 
 ;Used in to-c.lisp.
 (defclass state-to-c ()
-  ((nondescript-type-preface
+  ((var-precede :initform "" :initarg :var-precede)
+
+   (nondescript-type-preface
     :initform "Obj" :initarg :nondescript-type-preface)))
 
 (defvar *initial-args*
@@ -31,22 +33,11 @@
     (whitespace (list #\Tab #\Newline #\Space)) (comment (list #\#))
     (except nil) (except-prev-nonsymbol nil)))
 
-(defun set-reader (&optional (to-args *initial-args*))
-  "Reads a file by chaining the tokenizer and resolver."
-  (lambda (state type-of stream)
-    (flet ((get-sym (sym) (copy-list (cadr(assoc sym to-args)))))
-      (fun-resolve 
-       (tokenize-stream stream
-	 :list-open (get-sym 'list-open) :list-close (get-sym 'list-close)
-	 :whitespace (get-sym 'whitespace) :except (get-sym 'except)
-	 :except-prev-nonsymbol (get-sym 'except-prev-nonsymbol))
-       type-of :state state))))
-
 (defclass reader-state ()
-  ((reader :initform (set-reader))
+  ((reader :initform nil) ;functional (&optional (to-args *initial-args*))
    (args :initform *initial-args*)))
 
 (defclass default-state (fun-state state-to-c reader-state)
   ())
 
-(defvar *state* (make-instance 'default-state))
+(setf *state* (make-instance 'default-state))

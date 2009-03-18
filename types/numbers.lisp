@@ -133,3 +133,4 @@
 	       (defun int-and :inline :only-record (a b) (&& a b))
 	       (defun int-not :inline :only-record (a b) (!  a b))
 	       (defun mod     :inline :only-record (a b) (%  a b))")
+

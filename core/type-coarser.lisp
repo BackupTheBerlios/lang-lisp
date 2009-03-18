@@ -19,6 +19,7 @@
 
 (in-package #:lang)
 
+;Functions which decide which type is coarser.
 (defun type-coarser (type specific &key (state *state*) (vars (list nil))
 		     no-conversion)
   "function-match for a single argument."

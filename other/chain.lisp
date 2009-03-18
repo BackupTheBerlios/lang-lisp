@@ -1,4 +1,4 @@
-;;
+;
 ;;  Copyright (C) 2009-02-07 Jasper den Ouden.
 ;;
 ;;  This file is part of Lang(working title).
@@ -17,124 +17,57 @@
 ;;  along with Lang.  If not, see <http://www.gnu.org/licenses/>.
 ;;
 
+
+;;TODO see if any good libs for this around.
+
 (in-package #:lang)
 
-(defun parse-number (str)
-  "Parses a number and returns either an integer or a float.
-Nil if it doesn't recognize it." ;TODO put in proper file.
-  (if-use
-   (loop for ch across str
-         for n from 0
-      when (eql ch #\.)
-      return (+ (parse-integer(subseq str 0 n))
-		(* (parse-integer(subseq str (+ n 1)))
-		   (expt 10.0 (- (+ n 1) (length str))))))
-   (parse-integer str :junk-allowed t)))
+(defvar *default-conv* (list nil))
 
-;Previous function is needed for this one.
-;(defun eval-getstr-code (getstr &optional (first-str ""))
-;  "Gets code from a series of strings, obtained with (funcall getstr)."
-;  (flet ((eql-curry (with)
-;	   (lambda (sym) (eql sym with))))
-;    (tokenlist-make-tree
-;     (let ((str ""))
-;       (loop while (setf str (funcall getstr))
-;	  append (tokenize-str str
-;		   :wrap (lambda (tok k)
-;			   (declare (ignorable k))
-;			   (if-use (parse-number tok) (intern tok)))
-;	           :except (list #\( #\) #\; #\|))))
-;     :list-open (eql-curry '|(|) :list-close (eql-curry '|)|)
-;     :sep (eql-curry '|;|) :sep-stop (eql-curry '|\||)
-;     :comment-start (eql-curry '|/*|) :comment-stop (eql-curry '|*/|)
-;     :next-lister (eql-curry '|'|))))
+(defun get-conv (from to &optional (convs *default-conv*))
+  "Chooses conv function based on two symbols that name them."
+  (getf (getf (car convs) from) to))
 
-(defun eval-getstr-code (getstr &optional (first-str ""))
-  (multiple-value-bind (final-str ret)
-      (read-lisp getstr first-str
-	(lambda (obj)
-	  (cond
-	    ((stringp obj) (if-use (parse-number obj) (intern obj)))
-	    (t		obj))))
-    ret))
+(defun (setf get-conv) (fun from to &optional (convs *default-conv*))
+  "Sets conv based on symbols that name them. Will replace if exist."
+  (setf (getf (getf (car convs) from) to) fun))
 
-(defun eval-str-code (str)
-  "Evaluate string to produce code."
-  (eval-getstr-code (lambda () "") str))
+(defmacro def-conv (name (from to &key (input 'input) (rest 'rest)
+			       (convs '*default-conv*))
+		   &body body)
+  "Makes a conv. If name is non-nil it will also be a function on that \
+name. (Otherwise function is on gensym.) Documentation string allowed."
+  (setf- if-use name (gensym))
+  `(progn (defun ,name (,input ,rest)
+	    (declare (ignorable rest))
+	    ,@body)
+	  (setf (get-conv ',from ',to ,convs) #',name)))
 
-(defun eval-stream-code (stream)
-  "Read from stream, and evaluate to produce code."
-  (eval-getstr-code (lambda () (read-line stream))))
+(defun evalf (from to input rest &optional (convs *default-conv*))
+  "Evaluates from one point to another. WARNING currently you need to 
+provide all chains you use explicitly with function chain-convs."
+  (if-with fun (get-conv from to convs)
+    (funcall fun input rest)
+    (error (format nil "Evalf did not find conv from ~D to ~D."
+		   from to))))
 
-(defun eval-file-code (filename)
-  "Open stream at filename, read and evaluate to produce code."
-  (with-open-file (stream filename :direction :input :if-does-not-exist nil)
-    (when stream
-      (eval-stream-code stream))))
+;;Hmm, want any more? Wish i knew graph theorems.
+(defun chain-convs (chain &optional (convs *default-conv*))
+  "Sees if there are links missing, creates them where possible."
+  (unless (null (cddr chain))
+    (do ((i (cdr chain) (cdr i))) ((null (cdr i)) nil)
+      (unless (get-conv (car chain) (cadr i) convs)
+	(setf (get-conv (car chain) (cadr i) convs)
+	  (let ((from (car chain)) (intermediate (car i))
+		(to (cadr i))) ;Witout let, it stays linked to chain and i!!
+	    (lambda (input rest)
+	      ;Assume we have the one from (car chain) to (car i) and
+	      ; (car i) to (cadr i)
+	      (evalf intermediate to
+		(evalf from intermediate input rest convs)
+		rest convs))))))
+    (chain-convs (cdr chain) convs)))
 
-(defun eval-code-res (code &key vars (state *state*))
-  "Evaluate from token code to resolved."
-  (fun-resolve code vars :state state))
-
-(defun eval-res-c (res &key (state *state*)
-		   (body-level t) fun-top top-level)
-  "Evaluate from resolved to C code."
-  (process-code res :state state :fun-top fun-top :top-level top-level
-		:body-level body-level))
-
-(defun eval-res-sum (input &key more-on-fun more-on-mac)
-  "From resolved code to more readable summary."
-  (flet ((summary (sub-input)
-	   (eval-res-sum sub-input
-		    :more-on-fun more-on-fun ::more-on-mac more-on-mac)))
-  (case (type-of input)
-    (cons
-     (loop for el in input collect
-	  (summary el)))
-    (fun
-     (with-slots (name arg-types out-type more-specific) input
-       `(:fun ,name ,arg-types ,out-type
-	      ,@(cond
-		 (more-on-fun
-		  `(:more-specific ,(summary more-specific)))))))
-    (out
-     (with-slots (name out-type code) input
-       (append (list :out name out-type)
-	       (when more-on-mac `(:code ,(summary code))))))
-    (value
-     (with-slots (out-type from) input
-       `(:val ,(summary from) ,out-type)))
-    (t
-     input))))
-
-;;TODO hrmm.. what about that xml thing, and the simple macro expander?
-;; need a more arbitrary approach or am i overcomplicating?
-(defmacro evalm (from to arg &rest keys)
-  "Evaluates from some point to another, better use this instead
-of the functions."
-  (flet ((getkey (key) (when-with got (getf keys key) `(,key ,got))))
-    (case from
-      ((file stream str)
-       (let ((eval (case from
-		     (file   'eval-file-code)
-		     (stream 'eval-stream-code)
-		     (str    'eval-str-code))))
-	 (case to
-	   (code `(,eval ,arg))
-	   ((res c sum)
-	    `(evalm code ,to (,eval ,arg) ,@keys)))))
-      (code
-       (case to
-	 (res  `(eval-code-res ,arg
-			       ,@(getkey :state) ,@(getkey :vars)))
-	 
-	 ((c sum)
-	  `(evalm res ,to (eval-code-res ,arg
-					 ,@(getkey :state) ,@(getkey :vars))
-		  ,@keys))))
-      (res
-       (case to
-	 (c    `(eval-res-c ,arg ,@(getkey :body-level)
-			    ,@(getkey :fun-top) ,@(getkey :top-level)))
-	 (sum  `(eval-res-sum ,arg ,@(getkey :more-on-fun)
-			      ,@(getkey :more-on-mac))))))))
+(defmacro evalm (from to input &rest rest)
+  "See evalf."
+  `(evalf ',from ',to ,input (list ,@rest) *default-conv*))

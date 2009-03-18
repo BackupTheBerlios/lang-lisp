@@ -26,6 +26,7 @@
 	  `(("/*" ,#'clause-comment)
 	    ("//" ,#'clause-line-comment)
 	    (">"  ,(lambda (getstr str)
+		     (declare (ignorable getstr))
 		     (case stage
 		       (:first (setf stage :body)
 			       (setf- reverse first)
@@ -34,6 +35,7 @@
 			       str)
 		       (:rep   (values str t)))))
 	    ("</" ,(lambda (getstr str)
+		     (declare (ignorable getstr))
 		     (case stage
 		       (:body  (setf stage :rep)
 			       (setf- reverse rest)
@@ -62,13 +64,16 @@
 		    newstr)))
 	 ("<:" ,(clause-add-xml-like #'add-out))
 	 (")"  ,(lambda (getstr str)
+		  (declare (ignorable getstr))
 		  (values str t)))
 	 ("|"  ,(lambda (getstr str)
+		  (declare (ignorable getstr))
 		  (setf- append non-sub-out out)
 		  (setf out (list))
 		  (setf is-sep nil)
 		  str))
 	 (";"  ,(lambda (getstr str)
+		  (declare (ignorable getstr))
 		  (unless is-sep
 		    (setf is-sep t)
 		    (setf out (list out)))

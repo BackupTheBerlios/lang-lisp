@@ -33,11 +33,11 @@
 
 ;Macro results go in these. (TODO code -> from?)
 (defclass out ()
-  ((name      :initarg :name :initform nil :accessor name)
-   (code      :initarg :code :initform nil :accessor code)
-   (full-code :initarg :full-code :initform nil :accessor full-code)
+  ((name  :initarg :name :initform nil)
+   (code      :initarg :code :initform nil)
+   (full-code :initarg :full-code :initform nil)
    (out-type  :initarg :type :initform nil :accessor out-type)
-   (data      :initarg :data :initform nil :accessor data)))
+   (data      :initarg :data :initform nil)))
 
 (defmethod out-type ((list list))
   (argumentize-list (obj &rest args) list

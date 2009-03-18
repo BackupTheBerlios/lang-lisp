@@ -38,7 +38,8 @@
 	 :initform (lambda (code type-of &key funs macs rawmacs)
 		     (declare (ignorable funs macs rawmacs type-of))
 		     (values (cdr code) :again))
-	 :accessor fun)))
+	 :accessor fun)
+   (to-c :initarg nil)))
 
 (defun mac-get (name arg-types &key macs (state *state*))
   "Gets a macro."

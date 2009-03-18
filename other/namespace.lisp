@@ -73,7 +73,7 @@
   "Sets a symbol from an assoc list."
   (cond
     ((loop for namespace in (slot-value state 'namespaces)
-	when (setf got (assoc (append-namespace namespace symbol) (car from)))
+	when (assoc (append-namespace namespace symbol) (car from))
 	return (setf (cadr (assoc (append-namespace namespace symbol)
 				  (car from)))
 		     to))

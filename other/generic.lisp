@@ -19,22 +19,21 @@
 (defpackage #:generic
   (:nicknames #:gen)
   (:use #:common-lisp)
-  (:export sqr swap
+  (:export sqr swap delist
            with-gensyms for-more setf-
-	   if-with if-use when-with cond-with
+	   if-with if-use when-with case-with cond-with
 	   string-case
 	   in-list clamp
 	   before-out
 	   and* or*
-	   defclass2
-	   simple-accessor simple-accessor-set
-	   simple-setf-fun
-	   argumentize-list &key &optional &rest))
+	   with-values-in-argument))
 
 (in-package #:generic)
 
 
 (defun sqr(x) (* x x))
+
+(defun delist (x) (if (listp x) (car x) x))
 
 (defmacro swap (a b &optional tmp)
 "Swaps two variables." ;TODO abstraction leak from state changing setf functions.
@@ -90,6 +89,10 @@ WARNING/TODO: abstraction leak if set has sideeffects."
   "When, but with the condition, var available."
   `(if-with ,var ,cond (progn ,@body) nil))
 
+(defmacro case-with (var is &rest cases)
+  `(let ((,var ,is))
+     (case ,var ,@cases)))
+
 (defmacro cond-with (varname &rest clauses)
   "Cond, except before each clause comes a variable that is that clause.
 TODO untested."
@@ -98,7 +101,7 @@ TODO untested."
 		collect `((setf ,varname ,(car c)) ,@(cddr c))))))
 
 (defmacro string-case (string &rest cases)
-"A case for strings."
+  "A case for strings."
   (cons 'cond
     (loop for el in cases
       collect (if (eql (car el) t)
@@ -142,52 +145,8 @@ More clear then the ifs used explicitly IMO."
 	 t
 	 (or* ,@(cdr args)))))
 
-(defmacro defclass2 (name (derive-from) (&rest items))
-"defclass, but makes accessor and initial argument automatically."
-  `(defclass ,name (,@derive-from)
-     (,@(loop for el in items
-	  collect
-	   (if (listp el)
-	     `(,(car el) :accessor ,(car el) :initarg ,(car el)
-	         ,@(cdr el))
-	     `(,el :accessor ,el :initarg ,el))))))
-
-(defmacro make-instance2 (class &rest initargs)
-  `(make-instance ,class
-     ,@(do ((iter initargs (cddr iter))
-	    (out nil
-		 (append out
-			 `(,(intern(symbol-name (car iter))) (cadr iter)))))
-	   ((null iter) out))))
-
-(defmacro simple-setf-fun (name arg access &key doc-string declaration)
-"Makes a simple accessor. The accessing must be done in access."
-  (unless (listp arg) (setf- list arg))
-  `(progn
-     (defun ,name (,@arg)
-       ,@(when doc-string `(,doc-string))
-       ,@declaration
-       ,access)
-     (defun (setf ,name) (to ,@arg)
-       ,@(when doc-string `(,doc-string))
-       ,@declaration
-       (setf ,access to))))
-
-;;TODO add possibility of extra arguments.
-(defmacro simple-accessor (name class arg access &key (with-generic t))
-"Makes a simple accessor."
-  `(progn
-     ,@(when with-generic
-        `((defgeneric ,name (,arg))
-	  (defgeneric (setf ,name) (to ,arg))))
-     (defmethod ,name ((,arg ,class)) ;Reader.
-       ,access)
-     (defmethod (setf ,name) (to (,arg ,class))
-       (setf ,access to))))
-
-(defmacro simple-accessor-set (class (&rest set) &key (with-generic t))
-"Makes multiple simple accessors to a single class. set must be (name arg access)."
-  `(progn
-     ,@(loop for el in set
-	collect `(simple-accessor ,(first el) ,class ,(second el) ,(third el)
-				  :with-generic ,with-generic))))
+(defmacro with-values-in-argument (function values cnt
+				   &optional before after)
+  (let ((gensyms (loop repeat cnt collect (gensym))))
+    `(multiple-value-bind (,@gensyms) ,values
+       (,function ,@before ,@gensyms ,@after))))

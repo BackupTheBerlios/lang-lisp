@@ -20,6 +20,8 @@
 ;Lang stuff and base lang libraries.
 (load "loader.lisp")
 
+(load "convert/to-c2.lisp")
+
 (load "read/read-c.lisp")
 
 (in-package #:lang)
@@ -28,31 +30,31 @@
 
 (evalm str c "progn 50.9")
 
-(evalm str c "progn-raw (defun name ((x (any))) x)")
-
-(evalm str c "progn-raw
+(evalm str res "progn-raw
   (do-times (const 3) (i) i)")
 
 (evalm str c "progn-raw
   (let (a 1;)
     (namespace mew
      (let (b 2;)
-       (* a b)))" :body-level t)
+       (* a b)))" :body-level t :fun-level t)
 
 ;TODO why does it protest at first? Why going through a raw typeset?
 ;  And in process-code for that matter, that should be (nearly)stateless.
 (evalm str c "progn-raw
   (defun meh (a (int64); b (int64)) (+ (* a b) b a))" :body-level t)
+(evalm str c "progn-raw (defun name ((x (any))) x)")
 
 ;Note: this one needs meh
 (evalm str c "progn-raw
   (let (a 3 ; b 6) |
-    + a (bit-or (+ a 6 1) (meh a b));)" :body-level t)
+    + a (bit-or (+ a 6 1) (meh a b));)" :body-level t :fun-level t)
 
 (evalm str c "progn-raw
   (let (a 45 ; b 61) |
     progn 5 6 2;
-    + a (let ((c (sqr (let ((d a)) (+ b d))))) | * c b;);" :body-level t)
+    + a (let ((c (sqr (let ((d a)) (+ b d))))) | * c b;);"
+  :body-level t :fun-level t)
 
 (evalm str c "progn-raw
   (let (a 56 ; b 6) |

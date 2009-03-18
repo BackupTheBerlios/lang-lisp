@@ -82,7 +82,7 @@ argument is what it sets to."
 
 (rawmac-add set () () (what to)
   "Set variables, references and settable functions."
-  (let ((to   (fun-resolve to type-of)))
+  (let ((to (fun-resolve to type-of)))
     (cond
       ((symbolp what)
        (let ((what (value-resolve what type-of :state state)))

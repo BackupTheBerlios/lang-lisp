@@ -81,7 +81,7 @@
 				   (t     `(|ref-var| ,out-type))))))))
 	  type-of))
       ;Resolve output. (Doesn't have a progn-like thing at its end.)
-	(out-res  (fun-resolve `(progn ,@body) new-type-of)))
+	(out-res  (fun-resolve `(progn-raw ,@body) new-type-of)))
    ;Construct output code.
     (if (null var-list)
       out-res 

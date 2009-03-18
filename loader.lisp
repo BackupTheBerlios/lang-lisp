@@ -21,16 +21,17 @@
 (load "other/generic.lisp")
 
 (load "other/namespace.lisp")
-(load "other/argument-positioner.lisp")
-
-(load "other/simple-macexpand.lisp")
+(load "other/argument.lisp")
 
 (load "read/read.lisp")
 (load "read/read-lisp.lisp")
 
 (defpackage #:lang
-  (:use #:common-lisp #:generic #:namespace #:read #:read-lisp))
+  (:use #:common-lisp #:generic #:argument #:namespace #:read #:read-lisp))
 ;Function and macro to get stuff from a list like a macro.
+
+(in-package #:lang)
+(defvar *state*)
 
 ;The code that does the processing to an s-expression with the functions and
 ;values entirely specified as objects with arguments and return types.
@@ -48,9 +49,10 @@
 (load "core/states.lisp")  ;Extensions of the state that macros/output use.
 
 ;Output.(Uses the macros.)
-(load "convert/to-c.lisp")
+(load "convert/to-c2.lisp")
 
 (load "other/chain.lisp")
+(load "other/chain-lang.lisp")
 
 ;Macros that you need to actually do anything with it.
 (load "macs/macs.lisp")

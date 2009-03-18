@@ -107,19 +107,22 @@ what these functions return is where reader continues."
   "Zips past the comment. TODO C has escapes for these?"
   (do ((str str (funcall getstr)))
       ((null str) nil)
-    (return
-      (do ((str str (subseq* str 1))) ((= 0 (length str)) nil)
-	(when (first-equal str end-comment-str)
-	  (return str))))))
+    (when-with retstr
+	(do ((str str (subseq* str 1))) ((= 0 (length str)) nil)
+	  (when (first-equal str end-comment-str)
+	    (return str)))
+      retstr)))
 
 (defun clause-line-comment (getstr &optional (str ""))
   "Zips past line comment. Currently assumes that things are read line by \
 line."
+  (declare (ignorable str))
   (funcall getstr))
 
 (defun clause-add (add &key (stop #'non-symbol))
   "Produces an adding clause getting a symbol."
   (lambda (getstr str)
+    (declare (ignorable getstr))
     (let ((got (get-token str stop)))
       (funcall add got)
       (subseq str (length got)))))

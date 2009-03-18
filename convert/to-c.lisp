@@ -93,15 +93,16 @@ variable name."
 
 ;;TODO horrid code. How about a sort of macro resolving instead?
 
+(defun strip-last (list) ;TODO put in correct file.
+  (loop for el on list
+     unless (null(cdr el)) collect (car el)))
+
 ;; Maybe add conversion functions to the macros, and use them.
 (defun process-code (code &key (state *state*) fun-top
 	      (var-precede "") top-level body-level (tab-depth 0) do-auto)
   "Processes code, producing C code."
   (let (body-collected gen-collected)
-  (flet ((strip-last (list)
-	   (loop for el on list
-	      unless (null(cdr el)) collect (car el)))
-	 (c-return (main)
+  (flet ((c-return (main)
 	   (values main body-collected gen-collected))
 	 (process (c &key (tabd 0) first-fun 
 		     body-level (var-precede ""))
@@ -176,7 +177,7 @@ variable name."
 				      (setf gen-collected nil)))))
 	     (cond
 	       (fun-top ;Will take the last and make it return there.
-		(assert body-level () "Fun-top should imply body-level.")
+		(assert body-leveol () "Fun-top should imply body-level.")
 		(c-return ;TODO make fun-top work properly.
 		 (tabbed-body (+ tab-depth 1)
 		   (loop for c on (cdr code) 
