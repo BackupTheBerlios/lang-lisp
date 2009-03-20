@@ -20,14 +20,14 @@
 
 (defmacro binary-fun-allow-rest (symbols)
   `(progn 
-   ,@(loop for s in symbols
-       collect
+   ,@(iter (for s in symbols)
+       (collect
         `(mac-add ,s () () (first second &rest rest)
 	   ,(format nil "Allows ~D to have &rest" s)
 	   (values (if (null rest)
 		       (list ',s first second)
 		       (list ',s first (append (list ',s second) rest)))
-		   :defer-to-fun)))))
+		   :defer-to-fun))))))
 
 (defmacro inverse-binary-fun-allow-rest (inverse non-inverse)
   `(mac-add ,inverse () () (first second &rest rest)
@@ -44,11 +44,11 @@
 		(and (null (cdr type)) (null (cdr compare-type))))
 	  (let ((types '(|int8| |int16| |int32| |int64| |integer|
 			 |float| |double| |long-double| |number|)))
-	    (loop for tp in types
-	       when (eql tp (car type))
-	       return nil
-	       when (eql tp (car compare-type))
-	       return t)))))
+	    (iter (for tp in types)
+	       (when (eql tp (car type))
+		 (return nil))
+	       (when (eql tp (car compare-type))
+		 (return t)))))))
 
 ;;Numbers stuff.
 (binary-fun-allow-rest (+ * < > <= >=))
@@ -57,6 +57,7 @@
 
 ;TODO eventually bignum, fraction, more general number class.
 ;Make atomic number types.
+(add-type '|long-double| ('atomic-type) :c-name '|double| :size 8)
 (add-type '|double| ('atomic-type) :c-name '|double| :size 8)
 (add-type '|float|  ('atomic-type) :c-name '|float|  :size 4)
 (add-type '|int64|  ('atomic-type) :c-name '|int64|  :size 8)
@@ -73,22 +74,43 @@
 	       (|long-double|) (|number|)))
       (ints  '((|int8|) (|int16|) (|int32|) (|eql| (|integer| n))
 	       (|int64|) (|integer|))))
+ ;Conversion.
+  (flet ((are-in-c (&rest tps)
+	   (dolist (tp tps)
+	     (case (car tp)
+	       ((|long-double| |double| |float|
+		 |int64| |int32| |int16| |int8|) (return t))))))
+    (iter (for r on reals)
+      (unless (or (null (cdr r)) (eql (caar r) '|eql|))
+	(destructuring-bind (from to) (subseq r 0 2)
+	  (conv-add (intern(format nil "~D_~D" from to))
+		    `(,from ,to) ()
+	      :c-name (when (are-in-c from to) ;C can convert.
+			'identity)))))
+    (iter (for i on ints)
+      (unless (or (null (cdr i)) (eql (caar i) '|eql|))
+	(destructuring-bind (from to) (subseq i 0 2)
+	  (conv-add (intern(format nil "~D_~D" from to))
+		    `(,from ,to) ()
+	      :c-name (when (are-in-c from to) ;C can convert.
+			'identity))))))
+ ;Out-types of binary ops.
   (dolist (s '(+ - * /))
     (flet ((add (t1 t2 to)
 	     (fun-add s `(,t1 ,t2) ()
 		      :out-type to :flags '(:c-binary-fun))
 	     (fun-add s `(,t2 ,t1) ()
 		      :out-type to :flags '(:c-binary-fun))))
-      (loop for r on reals
-	    for k from 0
-	 if (<= k def-flt)
-	      do (dolist (r2 r) (add r2 (car r) (nth def-flt reals)))
-	 else do (dolist (r2 r) (add r2 (car r) (car r))))
-      (loop for i on ints
-	    for k from 0
-	 if (<= k def-int)
-	      do (dolist (i2 i) (add i2 (car i) (nth def-int ints)))
-	 else do (dolist (i2 i) (add i2 (car i) (car i)))))))
+      (iter (for r on reals)
+	    (for k from 0)
+	 (if (<= k def-flt)
+	   (dolist (r2 r) (add r2 (car r) (nth def-flt reals)))
+	   (dolist (r2 r) (add r2 (car r) (car r)))))
+      (iter (for i on ints)
+	    (for k from 0)
+	 (if (<= k def-int)
+	   (dolist (i2 i) (add i2 (car i) (nth def-int ints)))
+	   (dolist (i2 i) (add i2 (car i) (car i))))))))
 
 ;And boolean returning ones.
 (let ((numbers
@@ -100,8 +122,9 @@
 	       :out-type '(boolean) :flags '(:c-binary-fun))))))
 
 ;Some functions.
-(fun-resolve '(|defun| |sqr| |:only-record| |:specify-as-used|
-	       (x) (* x x)) '())
+(evalm str res "progn-raw
+  (defun sqr :only-record :specify-as-used ((x (number)))
+    (* x x))")
 
 ;And bitmask/integer-only stuff.
 (binary-fun-allow-rest (|bit-or| |or| & &&))
@@ -116,13 +139,13 @@
 
 (let*((integers '((|int64|) (|int32|) (|int16|) (|int8|)))
       (len (length integers)))
-  (loop for i from 0 upto (- len 1) do
-  (loop for j from 0 upto (- len 1) do
-    (dolist (s '((|bit-or| |\||) (|or| |\|\||) & && %))
-      (fun-add (if (listp s) (car s) s)
-	       `(,(nth i integers) ,(nth j integers)) ()
-	:c-name (when (listp s) (cadr s))
-	:out-type (nth (min i j) integers) :flags '(:c-binary-fun)))))
+  (dotimes (i len)
+    (dotimes (j len)
+      (dolist (s '((|bit-or| |\||) (|or| |\|\||) & && %))
+	(fun-add (if (listp s) (car s) s)
+		 `(,(nth i integers) ,(nth j integers)) ()
+	   :c-name (when (listp s) (cadr s))
+	   :out-type (nth (min i j) integers) :flags '(:c-binary-fun)))))
   (dolist (el integers)
     (fun-add '~ `(,el) () :out-type el)
     (fun-add '! `(,el) () :out-type el)))

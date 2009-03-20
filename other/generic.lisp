@@ -16,9 +16,12 @@
 ;;  You should have received a copy of the GNU Affero General Public License
 ;;  along with Lang.  If not, see <http://www.gnu.org/licenses/>.
 ;;
+
+(require :iterate)
+
 (defpackage #:generic
   (:nicknames #:gen)
-  (:use #:common-lisp)
+  (:use #:common-lisp #:iterate)
   (:export sqr swap delist
            with-gensyms for-more setf-
 	   if-with if-use when-with case-with cond-with
@@ -46,7 +49,9 @@
 
 (defmacro with-gensyms ((&rest vars)&body body)
 "Makes you some variables with gensyms output in them."
-  `(let ,(loop for el in vars collect `(,el (gensym))) ,@body))
+  `(let (,@(iter (for el in vars)
+		 (collect `(,el (gensym)))))
+     ,@body))
 
 (defmacro before-out ((&body out) &body before)
 "Allows you to have a body after something you want to return without temporary 

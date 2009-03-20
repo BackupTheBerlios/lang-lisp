@@ -17,24 +17,20 @@
 ;;  along with Lang.  If not, see <http://www.gnu.org/licenses/>.
 ;;
 
-(require :iterate)
-
 ;Handy macros.
 (load "other/generic.lisp")
 
 (load "other/namespace.lisp")
-(load "other/argument.lisp")
+(load "other/argument-positioner.lisp")
+
+(load "other/simple-macexpand.lisp")
 
 (load "read/read.lisp")
-(load "read/read-lang.lisp")
+(load "read/read-lisp.lisp")
 
 (defpackage #:lang
-  (:use #:common-lisp #:iterate
-	#:generic #:argument #:namespace #:read-lang))
+  (:use #:common-lisp #:generic #:namespace #:read #:read-lisp))
 ;Function and macro to get stuff from a list like a macro.
-
-(in-package #:lang)
-(defvar *state*)
 
 ;The code that does the processing to an s-expression with the functions and
 ;values entirely specified as objects with arguments and return types.
@@ -55,7 +51,6 @@
 (load "convert/to-c.lisp")
 
 (load "other/chain.lisp")
-(load "other/chain-lang.lisp")
 
 ;Macros that you need to actually do anything with it.
 (load "macs/macs.lisp")
@@ -67,32 +62,7 @@
 (load "types/any.lisp")
 (load "types/eql.lisp")
 (load "types/numbers.lisp")
-(load "types/ptr.lisp")
-(load "types/ref.lisp")
+(load "types/pointers.lisp")
 
-;;Auto-documentation stuff.
-(require :asdf)
-(asdf:operate 'asdf:load-op :documentation-template)
 
-(defun doc-template-document ()
-  "Automatically documents langs functions with documentation-template."
-  (documentation-template:create-template (find-package '#:lang)
-    :subtitle "The main project."
-    :target "doc/autodoc/dt-lang.html")
-  (documentation-template:create-template (find-package '#:argument)
-    :subtitle "Iteration over arguments like macros take."
-    :target "doc/autodoc/dt-argument.html")
-  (documentation-template:create-template (find-package '#:namespace)
-    :subtitle ""
-    :target "doc/autodoc/dt-argument.html")
-  (documentation-template:create-template (find-package '#:read)
-    :subtitle "Iterate over text files, recognizing strings."
-    :target "doc/autodoc/dt-read.html"))
-;  (documentation-template:create-template (find-package '#:read-c)
-;    :subtitle "Reading C headers."
-;    :target "doc/autodoc/dt-read-c.html"))
 
-;Doesn't work, probably package troubles?
-;(require :tinaa)
-;
-;(tinaa:document-system :package '#:lang "doc/autodoc/tinaa-lang.html")
