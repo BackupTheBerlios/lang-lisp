@@ -80,10 +80,11 @@ needed, until it returns nil.
 Clauses is pairs of expected words and the functions get the string beyond,
 what these functions return is where reader continues."
   (do ((i 0 (+ i 1))
-       (str str (if (= (length str) 0) (funcall getstr) str))
+       (str str (do ((str str (funcall getstr)))
+		    ((or (null str) (not(= (length str) 0))) str)))
        (stop-now nil stop-now))
       ((or (when limit (>= i limit))
-	   stop-now (= (length str) 0)) (values str stop-now))
+	   stop-now (null str)) (values str stop-now))
     (cond
       ((funcall whitespace (aref str 0)) ;Skip whitespace.
        (setf- subseq* str 1))

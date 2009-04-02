@@ -24,21 +24,22 @@
 
 (fun-add '|ptr| '(anything) ()
   :doc-str "Pointer to an object."
-  :c-name '& :out-type '(|ptr| anything) :flags '(:chase-args))
+  :names '(:c &) :out-type '(|ptr| anything) :flags '(:chase-args))
 
 (fun-add '|val| '((|ptr| anything)) ()
   :doc-str "Value of an object."
-  :c-name '*  :out-type 'anything :flags '(:chase-args))
+  :names '(:c *)  :out-type 'anything :flags '(:chase-args))
 
 ;;Shifting and differences or pointers.
 (fun-add '|aref| '((|integer|) (|ptr| anything)) ()
-  :doc-str "Uses C's []" :c-name '[]
+  :doc-str "Uses C's []" :names '(:c [])
   :out-type 'anything :flags '(:chase-args))
 
 (fun-add '|ptr-shift| '((|ptr| anything) (|integer|)) ()
-  :doc-str "Shifting a pointer by whole object." :c-name '+
+  :doc-str "Shifting a pointer by whole object." :names '(:c +)
   :out-type '(|ptr| anything) :flags '(:c-binary-fun :chase-args))
 
 (fun-add '|ptr-difference| '((|ptr| anything) (|ptr| anything)) ()
-  :doc-str "Difference between pointers.(TODO by whole object??)" :c-name '-
+  :doc-str "Difference between pointers.(TODO by whole object??)"
+  :names '(:c -)
   :out-type '(|ptr-integer|) :flags '(:c-binary-fun :chase-args))

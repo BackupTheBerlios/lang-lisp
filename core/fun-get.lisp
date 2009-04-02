@@ -24,18 +24,14 @@
   ((out-type  :initarg :out-type  :initform nil :accessor out-type)
    (code      :initarg :code      :initform nil :accessor code)
    (full-code :initarg :full-code :initform nil :accessor full-code)
+   (args-code :initarg :args-code :initform nil)
    
-   ;TODO doesn't belong?
-   ;Function that outputs a string doing the function in C.
-   (c-name :initarg :c-name
-	   :initform nil :type (or null string))
-   (c-str  :initarg :c-str  :accessor c-str
-	   :initform nil :type (or null string))
-   
-   ;Flags are: :check-eql*, :inline..
+ ;Flags are: :check-eql*, :inline..
    (flags     :initarg :flags :initform nil)
    
-   (doc-str :initarg :doc-str :initform "" :type string)))
+   (doc-str :initarg :doc-str :initform "" :type string)
+
+   (names :initarg :names :initform nil :type list)))
 
 ;The reason this function is more complicated then just a wrapper round 
 ;named-typeset-get is that it also handles functions that are to be 

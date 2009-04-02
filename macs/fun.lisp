@@ -177,7 +177,7 @@ specialized to fit the argument types. (Produces error if it doesnt exist.)"
   `(flet ((,fundef)) ,@body))
 
 (mac-add hard-defun () () (name (&rest arg-types) out-type
-			   &key |:flags| |:c-name| |:make-fun| |:arg-names|
+			   &key |:flags| |:names| |:make-fun| |:arg-names|
 			   |:doc-str|)
   "Adds a function that is implemented in conversion to final language."
   (fun-add name arg-types item :out-type out-type
@@ -186,7 +186,7 @@ specialized to fit the argument types. (Produces error if it doesnt exist.)"
 				   (case f
 				     (|:chase-args| :chase-args)
 				     (t f))))
-	   :c-name |:c-name|)
+	   :names |:names|)
   (unless |:make-fun|
     (unless arg-names
       (setf arg-names (loop for a in arg-types

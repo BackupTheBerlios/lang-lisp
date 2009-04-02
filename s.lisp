@@ -22,18 +22,18 @@
 
 (in-package #:lang)
 
-(defmethod c-name ((ts typeset))
-  (with-slots (more-specific arg-types) ts
-    (print (list (evalm res sum more-specific) arg-types))))
-
 (evalm str c "progn 50.9")
 
 ;TODO too much breakage..
 (evalm str res "progn-raw
-  (do-times (const 3) (i) i)")
+  (do-times 4 (i) i)")
 
-(evalm str c "progn-raw
-  (let (a 1;)
+(setf (get-symbol 'do-times (slot-value *state* 'macs) *state*) nil)
+
+(print 'a)
+
+(evalm str sum "progn-raw
+  (let (a 2;)
     (namespace mew
      (let (b 2;)
        (* a b)))" :body-level t :fun-level t)
@@ -49,11 +49,16 @@
     + a (bit-or (+ a 6 1) (meh a b));)" :body-level t :fun-level t)
 
 ;TODO decrease dud variables in C output.
-(evalm str c "progn-raw
+
+(evalm res lisp (code-funarg-debody(evalm str res
+					 "progn-raw (let ((x 3)) 1 x) 3 4")))
+
+
+(evalm res lisp (code-funarg-debody(evalm str res "progn-raw
   (let (a 45 ; b 61) |
     progn 5 6 2;
-    + a (let ((c (sqr (let ((d a)) (+ b d))))) | * c b;);"
-  :body-level t :fun-level t)
+    + a (let ((c (* (let ((d a)) 81 (+ b d)) 2))) 1 | * c b;);"
+  :body-level t :fun-level t)))
 
 ;TODO to-c must recognize loop-like macros again.
 (evalm str sum "progn-raw
@@ -65,14 +70,46 @@
 (evalm str c "progn-raw
   (let (a 56;) (let ((ref b) 2;) (+ a b)))" :body-level t)
 
+(slot-value *state* 'manual-type-coarser)
+
+(process-fun (fun-get '|meh| '((|int64|) (|int64|))))
+
+(evalm str res "progn-raw
+  (defun main ((argc (int32)) (argv (ptr(ptr(int8)))))
+    0)")
+(process-fun (fun-get '|main| '((|int32|) (|ptr|(|ptr|(|int8|))))))
 
 (load "read/read-c.lisp")
 
-(slot-value *state* 'manual-type-coarser)
-
 (in-package #:read-c)
 
-(read-c (lambda()"") "int function(int a, int b);
-const double fun2 ();
-# define lala 4236373" #'print)
+(with-open-file (stream "/usr/include/stdint.h")
+  (read-c (lambda () (read-line stream nil nil)) " " #'print))
 
+(with-open-file (stream "/usr/include/stdint.h")
+  (reader "aa define miauw" (lambda () (read-line stream nil nil)) #'is-whitespace
+    `(("define" (lambda (getstr str)
+		  (print str) ""))
+      ("" ,(lambda (getstr str)
+	     "")))))
+
+(let ((list (list nil "define miauw 2")))
+  (read-c (lambda () (print(car(setf- cdr list))))
+	  "int function(int a, int b);
+const double fun2 ();
+# define lala 4236373" #'print))
+
+(stream-from-str 
+
+(print 'a)
+
+(require :asdf-install)
+
+(asdf-install:install :linedit)
+
+(require :linedit)
+
+(use-package :linedit)
+
+(do-symbols (var (find-package :linedit))
+  (print var) t))

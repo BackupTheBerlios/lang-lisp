@@ -43,7 +43,7 @@ Nil if it doesn't recognize it." ;TODO put in proper file.
 
 (def-conv eval-str-code (str code)
   "Evaluate string to produce code."
-  (eval-getstr-code (lambda () "") input))
+  (eval-getstr-code (lambda () nil) input))
 
 (def-conv nil (stream getstr)
   "Makes a get-str based on a stream."
@@ -64,11 +64,17 @@ Nil if it doesn't recognize it." ;TODO put in proper file.
   (fun-resolve input (getf rest :vars)
 	       :state (if-use (getf rest :state) *state*)))
 
-(def-conv eval-res-c (res c :input res)
+(def-conv eval-res-c (res c :input res) ;TODO rename to c-old.
   "Evaluate from resolved to C code."
   (process-code res :state (if-use (getf rest :state) *state*)
     :ps (make-ps :end-format-str (when (getf rest :fun-level) "return ~D")
 		 :body-level (getf rest :body-level))))
+
+(def-conv eval-res-lisp (res lisp)
+  (conv-code input *lisp-conv-state*))
+
+(def-conv eval-res-eval-lisp (lisp eval-lisp)
+  (eval input))
 
 (def-conv eval-res-sum (res sum)
   "From resolved code to more readable summary."
@@ -101,6 +107,7 @@ Nil if it doesn't recognize it." ;TODO put in proper file.
 (chain-convs '(stream getstr code res sum))
 (chain-convs '(str getstr code res sum))
 (chain-convs '(str getstr code res c))
+(chain-convs '(str getstr code res lisp eval-lisp))
 
 ;;Old version.
 (defmacro a-evalm (from to arg &rest keys)

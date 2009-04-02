@@ -23,9 +23,21 @@
 
 (in-package #:lang)
 
+(defmethod c-name ((fun fun))
+  (if-use (if-use (get-name fun :c) (get-name fun :usual))
+	  (slot-value fun 'name)))
+
+(defmethod c-name ((tp base-type))
+  (if-use (get-name tp :c) (get-name tp :usual)))
+
+(defmethod c-name ((list list))
+  (car list))
+
 (defstruct ps ;TODO return-flag, which is passed on up when that is correct.
   body-level end-format-str
   do-auto (tab-depth 0))
+
+(format nil "~{~a;~%~}~D" '(1 2 3 4) 'L)
 
 (defun process-type (type state ps)
   "Types for which how to write it in C isnt tied to the variable."
@@ -44,8 +56,8 @@
 ; (Must also make the actual types as needed)
 	     (t
 	      (format nil "~D~D"
-		      (slot-value  state 'nondescript-type-preface)
-		      (size-of type (cdr type) state))))))))))
+		(slot-value state 'nondescript-type-preface)
+		(size-of type (cdr type) state))))))))))
 
 (defun process-type-var (type var state ps)
   "Processes a variable with a type. Checks if the type needs to use the 
@@ -62,10 +74,6 @@ variable name."
 		collect (process-tp tp))))
     (t
      (format nil "~D ~D" (process-tp type) var))))))
-
-(defmethod c-name ((fun fun))
-  (with-slots (c-name name) fun
-    (if-use c-name name)))
 
 (defun tabbed-body (tab-depth body)
   (format nil (format nil "{~T~~D;~% ~~{~~~DT~~a;~~% ~~} ~~~DT}"
@@ -85,16 +93,7 @@ variable name."
 (defun carlast (list)
   (car(last list)))
 
-;NOTE will also need to continuously collect the stuff.
-
-(defmethod c-name ((list list))
-  (c-name (car list)))
-
-
-;;TODO horrid code. How about a sort of macro resolving instead?
-
 (defvar *c-process-mac* (make-hash-table))
-
 
 (defmacro process-aid (state ps &body body)
   (with-gensyms (gstate)
@@ -139,7 +138,7 @@ variable name."
 	 (c-return ;Note the c-return here.
 	  (cond 
 	   ;Identity function needs nothing.
-	    ((eql (slot-value fun 'c-name) 'identity)
+	    ((eql (c-name fun) 'identity)
 	     (unless (= (length args) 1)
 	       (error "Identity function should only have one argument."))
 	     (process (car args)))
@@ -211,12 +210,13 @@ variable name."
   "Processes let."
   (process-aid state ps
     (let ((new-vars
-	   (loop for v in (second code)
-	      unless (eql (car (out-type (cadr v))) '|eql|) ;Constant.
-	      collect
+	   (iter
+	    (for v in (second code))
+	    (unless (eql (car (out-type (cadr v))) '|eql|) ;Constant.
+	      (collect
 		(format nil "~D= ~D" ;TODO precede variable names to prevent conflict.
 		  (process-type-var (out-type (cadr v)) (car v) state ps)
-		  (process (cadr v)))))
+		  (process (cadr v)))))))
 	  (res (third code)))
       (cond
 	(body-level ;At body-level can put vars right here.
@@ -294,12 +294,14 @@ variable name."
 		       :format-str "~D_fun(~{~a~^, ~}, void** vars)~%")
       (c-name fun)
       (with-slots (full-code) fun
-	(loop for arg in (third full-code) collect (first arg)))))
+	(iter (for arg in (third full-code))
+	      (collect (first arg))))))
 
 (defun process-all-same-fun (fun state &key write-to)
   (cons (process-fun fun :state state :write-to write-to)
-	(loop for f in (more-specific fun)
-	   append (process-all-same-fun fun state :write-to write-to))))
+	(iter (for f in (more-specific fun))
+	      (appending
+	       (process-all-same-fun fun state :write-to write-to)))))
 
 (defun process-all-fun (state &key write-to)
   (let (result-list)

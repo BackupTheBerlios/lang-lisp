@@ -22,7 +22,7 @@
 (rawmac-add raw-while () () (cond &rest body)
   "Same as while, but no optional returing of value. Made it so that\
  conversion is easier."
-  `(,(make-instance 'out :name 'while :type '(void))
+  `(,(make-instance 'out :name 'while :type '(|void|))
      ,(fun-resolve cond type-of)
      ,(fun-resolve `(progn-raw ,@body) type-of)))
 
@@ -46,12 +46,12 @@
      (while (,cond ,return)
        ,@body
        (set ,var ,change))))
-
-(mac-add do-times () ((|integer|)) (count (var &optional return) &rest body)
-  "Does something count times."
-  `(do1 (,var 0 (+ ,var 1))
-	((< ,var ,count) ,return)
-     ,@body))
+;
+;(mac-add do-times () ((|integer|)) (count (var &optional return) &rest body)
+;  "Does something count times."
+;  `(do1 (,var 0 (+ ,var 1))
+;	((< ,var ,count) ,return)
+;     ,@body))
 
 (mac-add do-times () ((|eql| (|integer| n)))
     (count (var &optional return limit-count) &rest body)

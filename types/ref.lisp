@@ -47,7 +47,7 @@ functions to alter things, and have things not be copies of large \
 structures, but still use types in (non reference)functions as if they \
 weren't references. However, it might be a good idea to stay functional!
 WARNING currently ref does _not_ check if what it refers to still exists!"
-  :out-type '(|ref| anything) :c-name '& :flags '(:chase-args))
+  :out-type '(|ref| anything) :names '(:c &) :flags '(:chase-args))
 
 ;Only one level of reference allowed.
 (evalm str res "progn-raw
@@ -57,20 +57,22 @@ WARNING currently ref does _not_ check if what it refers to still exists!"
 (fun-add '|ref| '((|ptr| anything)) ()
   :doc-str "Reference to a pointer. The pointer is made to behave like a \
 reference."
-  :out-type '(|ref| anything) :c-name 'identity :flags '(:chase-args))
+  :out-type '(|ref| anything) :names '(:usual identity)
+  :flags '(:chase-args))
 
 (fun-add '|ptr| '((|ref| anything)) ()
   :doc-str "Pointer of an reference. The reference is already a pointer, \
 but now you get to treat it as a pointer too."
-  :out-type '(|ptr| anything) :c-name 'identity :flags '(:chase-args))
+  :out-type '(|ptr| anything) :names '(:usual identity)
+  :flags '(:chase-args))
 
 (fun-add '|ref| '((|var| anything)) ()
   :doc-str "Reference to a variable; does not do anything, but allows it to 
   automatically reference when there is a reference-only function."
-  :c-name 'identity :flags '(:chase-args)
+  :names '(:usual identity) :flags '(:chase-args)
   :out-type '(|ref-var| anything))
 
 (fun-add '|ptr| '((|ref-var| anything)) ()
   :doc-str "Pointer of a referenced variable."
-  :c-name '& :flags '(:chase-args)
+  :names '(:c &) :flags '(:chase-args)
   :out-type '(|ptr| anything))

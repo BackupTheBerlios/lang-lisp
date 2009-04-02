@@ -46,7 +46,7 @@
 		 :initform #'initial-convertable)
       
  ;Extensions by macros.
-   (extensions :initform nil :initarg extensions :type list)
+   (extensions :initform nil :initarg :extensions :type list)
    ))
 
 ;TODO can getting and setting manual functions be done better?
@@ -78,3 +78,11 @@
 (defmacro get-extension-slot (state extension-name slot)
   `(slot-value (get-extension ,state ,extension-name) ,slot))
 
+(defgeneric get-name (obj of-language)
+  (:documentation "Get name of things for different output languages."))
+
+(defmethod get-name (obj (of-lang symbol))
+  (getf (slot-value obj 'names) of-lang))
+
+(defmethod (setf get-name) (to obj (of-lang symbol))
+  (setf (getf (slot-value obj 'names) of-lang) to))

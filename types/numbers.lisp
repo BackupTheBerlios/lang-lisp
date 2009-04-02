@@ -57,13 +57,13 @@
 
 ;TODO eventually bignum, fraction, more general number class.
 ;Make atomic number types.
-(add-type '|long-double| ('atomic-type) :c-name '|double| :size 8)
-(add-type '|double| ('atomic-type) :c-name '|double| :size 8)
-(add-type '|float|  ('atomic-type) :c-name '|float|  :size 4)
-(add-type '|int64|  ('atomic-type) :c-name '|int64|  :size 8)
-(add-type '|int32|  ('atomic-type) :c-name '|int32|  :size 4)
-(add-type '|int16|  ('atomic-type) :c-name '|int16|  :size 2)
-(add-type '|int8|   ('atomic-type) :c-name '|int8|   :size 1)
+(add-type '|long-double| ('atomic-type) :names '(:usual |double|) :size 8)
+(add-type '|double| ('atomic-type) :names '(:usual |double|) :size 8)
+(add-type '|float|  ('atomic-type) :names '(:usual |float|)  :size 4)
+(add-type '|int64|  ('atomic-type) :names '(:usual |int64|)  :size 8)
+(add-type '|int32|  ('atomic-type) :names '(:usual |int32|)  :size 4)
+(add-type '|int16|  ('atomic-type) :names '(:usual |int16|)  :size 2)
+(add-type '|int8|   ('atomic-type) :names '(:usual |int8|)   :size 1)
 
 ;TODO what about just int? Equal it to int64 or int32?
 ;     And unsigned integers?
@@ -74,32 +74,12 @@
 	       (|long-double|) (|number|)))
       (ints  '((|int8|) (|int16|) (|int32|) (|eql| (|integer| n))
 	       (|int64|) (|integer|))))
- ;Conversion.
-  (flet ((are-in-c (&rest tps)
-	   (dolist (tp tps)
-	     (case (car tp)
-	       ((|long-double| |double| |float|
-		 |int64| |int32| |int16| |int8|) (return t))))))
-    (iter (for r on reals)
-      (unless (or (null (cdr r)) (eql (caar r) '|eql|))
-	(destructuring-bind (from to) (subseq r 0 2)
-	  (conv-add (intern(format nil "~D_~D" from to))
-		    `(,from ,to) ()
-	      :c-name (when (are-in-c from to) ;C can convert.
-			'identity)))))
-    (iter (for i on ints)
-      (unless (or (null (cdr i)) (eql (caar i) '|eql|))
-	(destructuring-bind (from to) (subseq i 0 2)
-	  (conv-add (intern(format nil "~D_~D" from to))
-		    `(,from ,to) ()
-	      :c-name (when (are-in-c from to) ;C can convert.
-			'identity))))))
  ;Out-types of binary ops.
   (dolist (s '(+ - * /))
     (flet ((add (t1 t2 to)
-	     (fun-add s `(,t1 ,t2) ()
+	     (fun-add s `(,t1 ,t2) () :names `(:usual ,s)
 		      :out-type to :flags '(:c-binary-fun))
-	     (fun-add s `(,t2 ,t1) ()
+	     (fun-add s `(,t2 ,t1) () :names `(:usual ,s)
 		      :out-type to :flags '(:c-binary-fun))))
       (iter (for r on reals)
 	    (for k from 0)
@@ -118,7 +98,7 @@
   (dolist (n1 numbers)
   (dolist (n2 numbers)
     (dolist (s '(< > <= >=))
-      (fun-add s `(,n1 ,n2) ()
+      (fun-add s `(,n1 ,n2) () :names `(:usual ,s)
 	       :out-type '(boolean) :flags '(:c-binary-fun))))))
 
 ;Some functions.
@@ -140,11 +120,11 @@
 (let*((integers '((|int64|) (|int32|) (|int16|) (|int8|)))
       (len (length integers)))
   (dotimes (i len)
-    (dotimes (j len)
+    (dotimes (j len) ;;TODO make the standard versions long.
       (dolist (s '((|bit-or| |\||) (|or| |\|\||) & && %))
 	(fun-add (if (listp s) (car s) s)
 		 `(,(nth i integers) ,(nth j integers)) ()
-	   :c-name (when (listp s) (cadr s))
+	   :names (when (listp s) `(:c ,(cadr s)))
 	   :out-type (nth (min i j) integers) :flags '(:c-binary-fun)))))
   (dolist (el integers)
     (fun-add '~ `(,el) () :out-type el)

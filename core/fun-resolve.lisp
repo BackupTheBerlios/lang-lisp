@@ -95,7 +95,7 @@ Returns the tree with the names replaced with function structs, and\
 		   item)
 		  (t ;Select which macro.
 		   (setf arg-types;Results of resolve otherwise discarded.
-			 (iter (for k from 1 upto typeset-arg-cnt)
+			 (iter (repeat typeset-arg-cnt)
 			       (for a in (cdr code))
 			    (collect (out-type(resolve a type-of)))))
 		   (typeset-get macset arg-types :state state)))))
@@ -111,10 +111,15 @@ Returns the tree with the names replaced with function structs, and\
 		 (t
 		  (error "(langs fault)What is this type of macro?")))
 	     (case validity ;Take messages from the macro.
-	       (:defer-to-fun (resolve result type-of :defer-to-fun t))
-	       (:discard      (resolve code type-of :defer-to-fun t))
-	       (:again        (resolve result type-of));Be warned.
-	       (:is-done      result)
+	       (:defer-to-fun ;Do the result with only functions.
+		              ; (For functions on the same name.
+		(resolve result type-of :defer-to-fun t))
+	       (:discard ;Discard result an defer to function instead.
+		(resolve code type-of :defer-to-fun t))
+	       (:again ;Resolve again.(Only useful for rawmac.)
+		(resolve result type-of))
+	       (:is-done
+		result)
 	       (t (case (type-of mac)
 		    (mac (resolve result type-of))
 		    (rawmac result)))))))))
@@ -142,16 +147,11 @@ Returns the tree with the names replaced with function structs, and\
 						       (car fa) fa)
 						   ,a))))
 			    ,@(cdr want)))
-		       type-of))
+			type-of))
 	    ;Return the function with the arguments, converted if needed.
 	      (t
 	       (cons fun
-		     (iter (for a-tp in (arg-types fun))
-			   (for a in arguments)
-		       (collect
-			   (if-with conv (conv-get (list (out-type a) a-tp)
-						   :state state)
-				    `(,conv ,a) a))))))))
+		     arguments)))))
 	 (t ;TODO conversion functions?
 	  (error "Couldn't find function/macro matching: ~D ~D"
 		 (car code) types))))))))

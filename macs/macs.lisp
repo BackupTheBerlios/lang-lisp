@@ -26,7 +26,7 @@
      (error "quote does not quote anything else then symbols yet."))))
 
 (mac-add const () () (const)
-  (make-instance 'value :type `(|eql| ,const)))
+  (make-instance 'value :type `(|eql| ,const) :from const))
 
 (rawmac-add namespace () () (name &rest body)
   (with-namespace name state
@@ -58,18 +58,18 @@
 (rawmac-add let () () ((&rest varlist) &rest body)
   "Makes variables. Made in sequence."
   (let*((var-list ;List that will later be part of output.
-	 (loop for c in varlist
-	    collect
-	      (argumentize-list (name value) c
-		(let ((res (fun-resolve value type-of))
-		      (name (if (listp name) (cadr name) name)))
-		 ;Make variable in namespace.
-		  `(,(namespace-symbol name state) ,res)))))
+	 (iter (for c in varlist)
+	       (collect
+		   (argumentize-list (name value) c
+		     (let ((res (fun-resolve value type-of))
+			   (name (if (listp name) (cadr name) name)))
+  		    ;Make variable in namespace.
+		       `(,(namespace-symbol name state) ,res))))))
 	(new-type-of ;Add some types.
 	 (append
-	  (loop for c in varlist
-	     for el in var-list
-	     collect `(,(car el)
+	  (iter (for c in varlist)
+		(for el in var-list)
+		(collect `(,(car el)
 			,(let ((out-type (out-type (cadr el))))
 			      (cond
 				((not(listp (car c)))
@@ -78,7 +78,7 @@
 				 (case (when (not (listp out-type))
 					 (car out-type))
 				   (|ref| out-type) ;Already settable.
-				   (t     `(|ref-var| ,out-type))))))))
+				   (t     `(|ref-var| ,out-type)))))))))
 	  type-of))
       ;Resolve output. (Doesn't have a progn-like thing at its end.)
 	(out-res  (fun-resolve `(progn-raw ,@body) new-type-of)))

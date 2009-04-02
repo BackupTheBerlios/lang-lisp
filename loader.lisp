@@ -51,9 +51,7 @@
 
 (load "core/states.lisp")  ;Extensions of the state that macros/output use.
 
-;Output.(Uses the macros.)
-(load "convert/to-c.lisp")
-
+;Chaining operations.
 (load "other/chain.lisp")
 (load "other/chain-lang.lisp")
 
@@ -69,6 +67,15 @@
 (load "types/numbers.lisp")
 (load "types/ptr.lisp")
 (load "types/ref.lisp")
+
+;TODO ;Transformations making things qualify for outputs. (Like to C)
+
+;Output.
+(load "convert/conv.lisp")
+(load "convert/conv-lisp.lisp")
+
+;Old output method.
+(load "convert/to-c.lisp")
 
 ;;Auto-documentation stuff.
 (require :asdf)

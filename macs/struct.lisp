@@ -25,8 +25,11 @@
    (pointer-type-size :initarg :pointer-type-size
 		      :initform 16 :type integer)
    (arbitrary-type-size :initarg :arbitrary-type-size
-			:initform 16 :type integer)))
+			:initform 16 :type integer))
+  (:documentation "State of the types holds some sizes and the types\
+ defined upto latest point."))
 
+;Add extension.
 (unless (get-extension *state* :types)
   (setf (get-extension *state* :types) (make-instance 'types-state)))
 
@@ -35,7 +38,7 @@
 ;;TODO creation of stuff.
 
 (defclass base-type ()
-  ((c-name  :initarg :c-name :initform nil :accessor c-name)
+  ((names  :initarg :names :initform nil)
    (name  :initarg :name :initform nil :accessor name)))
 
 (defclass atomic-type (base-type)
@@ -57,15 +60,18 @@
   (:documentation "Returns the size of whatever the representation of the\
  type. WARNING dont confuse cl:type-of! I made no such function."))
 
+(defmethod size-of (type with-el (state fun-state)) ;Defer to types-state.
+  (size-of type with-el (get-extension state :types)))
+
 (defmethod size-of ((type symbol) (with-el list) (state types-state))
   (if-with typed (assoc type with-el)
     ;Got that type specified, use it.
       (size-of (cadr typed) with-el state)
     ;Not specified, give cost of arbitrary type.
-      (get-extension-slot state :types 'arbitrary-type-size)))
+      (slot-value state 'arbitrary-type-size)))
 
 (defmethod size-of ((type list) (with-el list) (state types-state))
-  (size-of (gethash (car type) (get-extension-slot state :types 'types))
+  (size-of (gethash (car type) (slot-value state 'types))
 	   with-el state))
 
 (defmethod size-of :around ((type atomic-type) (with-el list)
@@ -131,7 +137,7 @@
 		     :type(type-fill (cadr(assoc slot-name 
 						 (cddr(code typespec))))
 				     with-el))
-		   ,struct-shift ,obj-res))))
+		   ,struct-shift ,slot-name ,obj-res))))
 	   (t
 	    (error "What the hell is this typespec?")))))
       (t
