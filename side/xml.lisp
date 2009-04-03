@@ -21,13 +21,14 @@
   (:use #:common-lisp #:generic)
   (:export produce-xml-fun produce-xml-string
 	   produce-xml-stream produce-xml-file
-	   attr no-close))
+	   attr no-close)
+  (:documentation "Makes xml data from nested tree data."))
 
 (in-package #:xml-out)
 
 (defun produce-xml-fun (code produce-fun &key (level 0)
 			   (attribute 'attr) (no-close 'no-close))
-  "Produce xml code based on code.
+  "Produce xml data based on nested tree data.
 First element of a list is the <name>
 Attribute(default 'attr) is the tag it 
 will look for in lists in the second element to add attributes."

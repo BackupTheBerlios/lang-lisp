@@ -1,0 +1,218 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+   <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+
+<title>Autodoc: Read package</title> </head><body>
+<table><tr height=10%>
+
+<table>
+    <td width="20%"></td>
+    <td width="20%"><big><h1>Lang-lisp project page</h1></big></td>
+</table>
+</tr><tr height=90%><table><td width=20% valign="top">
+
+<big>
+  <h3>Contents</h3>
+  <ul>
+    <li><a href="main.html">Main page</a></li>
+    <li><a href="explanation.html">Purpose</a></li>
+    <li><a href="stages.html">Stages of development</a></li>
+    <li><b>Download</b>
+      <ul><li><a href="https://developer.berlios.de/git/?group_id=10613" >Git repository</a></li>
+        <li><a href="http://download.berlios.de/gitdumps/lang-lisp-git.tar.gz" >Daily tarball</a></li>
+	<li><a href="https://git.berlios.de/cgi-bin/gitweb.cgi?p=lang-lisp;a=summary" >Git activity; commits</a></li>
+      </ul>
+    </li>
+    <li><a href="autodoc.html">Automatic documentation</a>. (Not much, but something.)</li>
+    <li><a href="license.html">License</a></li>
+    <li><a href="about.html">About/Contact</a></li>
+  </ul>
+</big>
+<small>Last update March 1 2009</small>
+
+<hr />
+<table>
+  <td><big>Hosted by</big></td>
+  <td>
+    <a href="http://developer.berlios.de">
+      <img src="http://developer.berlios.de/bslogo.php?group_id=10613" width="124" height="32" border="0" alt="BerliOS Logo" /></a> 
+      </td>
+</table>
+</td><td width=80%>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html> 
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+  <title>NAMESPACE - </title>
+  <style type="text/css">
+  pre { padding:5px; background-color:#e0e0e0 }
+  h3, h4 { text-decoration: underline; }
+  a { text-decoration: none; padding: 1px 2px 1px 2px; }
+  a:visited { text-decoration: none; padding: 1px 2px 1px 2px; }
+  a:hover { text-decoration: none; padding: 1px 1px 1px 1px; border: 1px solid #000000; } 
+  a:focus { text-decoration: none; padding: 1px 2px 1px 2px; border: none; }
+  a.none { text-decoration: none; padding: 0; }
+  a.none:visited { text-decoration: none; padding: 0; } 
+  a.none:hover { text-decoration: none; border: none; padding: 0; } 
+  a.none:focus { text-decoration: none; border: none; padding: 0; } 
+  a.noborder { text-decoration: none; padding: 0; } 
+  a.noborder:visited { text-decoration: none; padding: 0; } 
+  a.noborder:hover { text-decoration: none; border: none; padding: 0; } 
+  a.noborder:focus { text-decoration: none; border: none; padding: 0; }  
+  pre.none { padding:5px; background-color:#ffffff }
+  </style>
+</head>
+
+<body bgcolor=white>
+
+<h2> NAMESPACE - </h2>
+
+<br>&nbsp;<br><h3><a class=none name="contents">Contents</a></h3>
+<ol>
+  <li><a href="#download">Download</a>
+  <li><a href="#dictionary">The NAMESPACE dictionary</a>
+    <ol>
+      <li><a href="#gen-c-name"><code>gen-c-name</code></a>
+      <li><a href="#get-symbol"><code>get-symbol</code></a>
+      <li><a href="#get-symbol-assoc"><code>get-symbol-assoc</code></a>
+      <li><a href="#namespace-state"><code>namespace-state</code></a>
+      <li><a href="#namespace-symbol"><code>namespace-symbol</code></a>
+      <li><a href="#namespace-to-nil"><code>namespace-to-nil</code></a>
+      <li><a href="#with-namespace"><code>with-namespace</code></a>
+      <li><a href="#with-namespace-to-nil"><code>with-namespace-to-nil</code></a>
+    </ol>
+  <li><a href="#ack">Acknowledgements</a>
+</ol>
+
+<br>&nbsp;<br><h3><a class=none name="download">Download</a></h3>
+
+NAMESPACE together with this documentation can be downloaded from <a
+href="http://weitz.de/files/namespace.tar.gz">http://weitz.de/files/namespace.tar.gz</a>. The
+current version is 0.1.0.
+
+<br>&nbsp;<br><h3><a class=none name="dictionary">The NAMESPACE dictionary</a></h3>
+
+
+
+<!-- Entry for GEN-C-NAME -->
+
+<p><br>[Function]<br><a class=none name='gen-c-name'><b>gen-c-name</b> <i>state</i> =&gt; <i>result</i></a>
+<blockquote><br>
+
+Generates a name symbol.
+
+</blockquote>
+
+<!-- End of entry for GEN-C-NAME -->
+
+
+<!-- Entry for GET-SYMBOL -->
+
+<p><br>[Accessor]<br><a class=none name='get-symbol'><b>get-symbol</b> <i>symbol from state</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>get-symbol</b> <i>symbol from state</i><tt>)</tt> <i>to</i><tt>)</tt></a>
+<blockquote><br>
+
+Gets a symbol from an hash table.
+
+</blockquote>
+
+<!-- End of entry for GET-SYMBOL -->
+
+
+<!-- Entry for GET-SYMBOL-ASSOC -->
+
+<p><br>[Accessor]<br><a class=none name='get-symbol-assoc'><b>get-symbol-assoc</b> <i>symbol from state</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>get-symbol-assoc</b> <i>symbol from state</i><tt>)</tt> <i>to</i><tt>)</tt></a>
+<blockquote><br>
+
+Gets a symbol from an assoc list.
+
+</blockquote>
+
+<!-- End of entry for GET-SYMBOL-ASSOC -->
+
+
+<!-- Entry for NAMESPACE-STATE -->
+
+<p><br>[Standard class]<br><a class=none name='namespace-state'><b>namespace-state</b></a>
+<blockquote><br>
+
+
+
+</blockquote>
+
+<!-- End of entry for NAMESPACE-STATE -->
+
+
+<!-- Entry for NAMESPACE-SYMBOL -->
+
+<p><br>[Function]<br><a class=none name='namespace-symbol'><b>namespace-symbol</b> <i>symbol state</i> =&gt; <i>result</i></a>
+<blockquote><br>
+
+Adds current namespace to symbol.
+
+</blockquote>
+
+<!-- End of entry for NAMESPACE-SYMBOL -->
+
+
+<!-- Entry for NAMESPACE-TO-NIL -->
+
+<p><br>[Function]<br><a class=none name='namespace-to-nil'><b>namespace-to-nil</b> <i>state</i> =&gt; <i>result</i></a>
+<blockquote><br>
+
+
+
+</blockquote>
+
+<!-- End of entry for NAMESPACE-TO-NIL -->
+
+
+<!-- Entry for WITH-NAMESPACE -->
+
+<p><br>[Function]<br><a class=none name='with-namespace'><b>with-namespace</b> <i>with state fun</i> =&gt; <i>result</i></a>
+<blockquote><br>
+
+Adds namespace, does function, goes back to previous state.
+Returns function result.
+
+</blockquote>
+
+<!-- End of entry for WITH-NAMESPACE -->
+
+
+<!-- Entry for WITH-NAMESPACE-TO-NIL -->
+
+<p><br>[Function]<br><a class=none name='with-namespace-to-nil'><b>with-namespace-to-nil</b> <i>state fun</i> =&gt; <i>result</i></a>
+<blockquote><br>
+
+Remove current namespace state for function duration.
+
+</blockquote>
+
+<!-- End of entry for WITH-NAMESPACE-TO-NIL -->
+
+
+<br>&nbsp;<br><h3><a class=none name="ack">Acknowledgements</a></h3>
+
+<p>
+This documentation was prepared with <a href="http://weitz.de/documentation-template/">DOCUMENTATION-TEMPLATE</a>.
+</p>
+<p>
+$Header: /usr/local/cvsrep/documentation-template/output.lisp,v 1.14 2008/05/29 08:23:37 edi Exp $
+<p><a href="http://weitz.de/index.html">BACK TO MY HOMEPAGE</a>
+
+</body>
+</html>
+
+<hr />
+<table><tr><td width="80%"></td>
+    <td><big>Hosted by</big></td>
+    <td>
+      <a href="http://developer.berlios.de">
+	<img src="http://developer.berlios.de/bslogo.php?group_id=10613" width="124" height="32" border="0" alt="BerliOS Logo" /></a> 
+    </td>
+</tr></table>
+
+</td></table></tr></table></body></html>

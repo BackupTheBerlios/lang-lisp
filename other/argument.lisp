@@ -1,7 +1,29 @@
+;;
+;;  Copyright (C) 2009-04-03 Jasper den Ouden.
+;;
+;;  This file is part of Lang(working title).
+;;
+;;  Lang is free software: you can redistribute it and/or modify
+;;  it under the terms of the GNU Affero General Public License as published
+;;  by the Free Software Foundation, either version 3 of the License, or
+;;  (at your option) any later version.
+;;
+;;  Lang is distributed in the hope that it will be useful,
+;;  but WITHOUT ANY WARRANTY; without even the implied warranty of
+;;  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;;  GNU Affero General Public License for more details.
+;;
+;;  You should have received a copy of the GNU Affero General Public License
+;;  along with Lang.  If not, see <http://www.gnu.org/licenses/>.
+;;
+
 (defpackage #:argument
   (:use #:common-lisp #:generic)
   (:export do-by-argument argumentize-list
-	   &key &optional &rest))
+	   &key &optional &rest)
+  (:documentation "Iterating over a list argument by argument\
+ (do-by-argument), and destructuring-bind clone based on it\
+ (argumentize-list)"))
 
 (in-package #:argument)
 
@@ -23,35 +45,36 @@ and the list did not."
        ;Stop when arguments and non-arguments run out.
 	((and (null a) (null i)) nil)
       (flet ((reverse-chain ()
-	       (cons n reverse-chain)))
-	(flet ((getkey ()
-		 (dolist (k key)
-		   (when (eql-modulo-keyword (delist k) (car i))
-		     (funcall do-fun (cadr i) k reverse-chain '&key)
-		     (push (delist k) have-keys)
-		     (return)))
-		 (setf- cdr i)
-		 (setf- + n 1)))
-	  (cond
-	    ((unless (or key optional (null a)) (listp (car a)))
-	     (do-by-argument (car a) (car i) do-fun (reverse-chain)))
-	    ((eql (car a) '&optional)
-	     (setf a (cdr a))
-	     (setf optional t)
-	     (unless (null a)
-	       (funcall do-fun (car i) (car a) (reverse-chain) t)))
+	       (cons n reverse-chain))
+	     (getkey ()
+	       "Gets the key for some name."
+	       (dolist (k key)
+		 (when (eql-modulo-keyword (delist k) (car i))
+		   (funcall do-fun (cadr i) k reverse-chain '&key)
+		   (push (delist k) have-keys)
+		   (return)))
+	       (setf- cdr i)
+	       (setf- + n 1)))
+	(cond
+	  ((unless (or key optional (null a)) (listp (car a)))
+	   (do-by-argument (car a) (car i) do-fun (reverse-chain)))
+	  ((eql (car a) '&optional)
+	   (setf a (cdr a))
+	   (setf optional t)
+	   (unless (null a)
+	     (funcall do-fun (car i) (car a) (reverse-chain) t)))
 	 ;Misses first one, but is keyword. (Not contextsensitive that way.)
-	    ((eql (car a) '&key)
-	     (setf key (cdr a))
-	     (getkey))
-	    ((case (car a) ((&rest &body) t))
-	     (funcall do-fun i (cadr a) (reverse-chain) (car a))
-	     (return))
-	    (key
-	     (getkey))
-	    (t
-	     (funcall do-fun (car i) (car a) (reverse-chain)
-		      (when optional '&optional)))))))
+	  ((eql (car a) '&key)
+	   (setf key (cdr a))
+	   (getkey))
+	  ((case (car a) ((&rest &body) t))
+	   (funcall do-fun i (cadr a) (reverse-chain) (car a))
+	   (return))
+	  (key
+	   (getkey))
+	  (t
+	   (funcall do-fun (car i) (car a) (reverse-chain)
+		    (when optional '&optional))))))
    ;Do the missed keys with default values.
     (dolist (k key)
       (unless (dolist (kh have-keys) (when (eql kh (delist k)) (return t)))
@@ -71,7 +94,6 @@ the indexes."
     (optional nil) ;;all fine
     ((null arg)    (error "Nonoptional value left out."))
     ((listp arg)   (error "Nonoptional value got default value."))))
-
 
 (defun sget (list indicator)
   "Special getting for argumentize-list."
@@ -94,23 +116,22 @@ Setting arguments does not leave the closure."
 	(push `(,(delist arg)
 		 ,(case optional
 		    (&rest
-		     (nth-chain (reverse chain) glist :cdr t))
+		     (nth-chain chain glist :cdr t))
 		    (&optional
 		     (if (listp arg)
-		       `(if-use ,(nth-chain (reverse chain) glist)
+		       `(if-use ,(nth-chain chain glist)
 				,(cadr arg))
-		       (nth-chain (reverse chain) glist)))
+		       (nth-chain chain glist)))
 		    (&key
-		     (let ((get `(sget ,(nth-chain (reverse chain)
-						   glist :cdr t)
+		     (let ((get `(sget ,(nth-chain chain glist :cdr t)
 				       ',(delist arg))))
 		       (if (listp arg)
 			 `(if-use ,get ,(cadr arg))
 			 get)))
 		    (t
-		     (nth-chain (reverse chain) glist))))
+		     (nth-chain chain glist))))
 	      vars)))
-    `(let ((,glist ,list))
+    `(let ((,glist ,list)) ;Finally, actually make the output.
        (let (,@vars)
 	 ,@body))))
 

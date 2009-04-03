@@ -29,7 +29,8 @@
 ;Simple values like from constants and variables go in these.
 (defclass value ()
   ((out-type :initarg :type :initform nil :accessor out-type)
-   (from :initarg :from :initform nil :accessor from)))
+   (from :initarg :from :initform nil :accessor from))
+  (:documentation "Holds the information of values in Lang."))
 
 ;Macro results go in these. (TODO code -> from?)
 (defclass out ()
@@ -37,7 +38,9 @@
    (code      :initarg :code :initform nil)
    (full-code :initarg :full-code :initform nil)
    (out-type  :initarg :type :initform nil :accessor out-type)
-   (data      :initarg :data :initform nil)))
+   (data      :initarg :data :initform nil))
+  (:documentation "Holds information of final-macro output of Lang.
+Usually as first element in list, with arguments following."))
 
 (defmethod out-type ((list list))
   (argumentize-list (obj &rest args) list
@@ -62,6 +65,47 @@
 	 (values (funcall (slot-value state 'convert-type) code)
 		 code)))
     (make-instance 'value :from from :type type)))
+
+(defun fun-check (fun arg-types)
+  "Check if function with these argument types needs further specifying."
+  (with-slots (flags full-code) fun
+    (cond
+      ((and* (in-list flags :specify-as-used)
+	     (not (type-list-eql arg-types (arg-types got) 
+				 :state state)))
+;TODO how does this interact with namespace??
+;TODO problem: order of operation matters..
+;   Make more specific first, then more general, it makes both,
+;   reverse, it only makes more general.
+       ;Make the more specified function.
+       (let ((want (iter (for el on (cdr full-code))
+			 (when (listp (car el))
+			   (return el)))))
+	 (fun-resolve ;Resolve a new function.
+	  `(|defun| ,(cadr full-code) |:specify-as-used|
+	     ,(iter (for a  in arg-types) ;Switch to current types.
+		    (for fa in (car want))
+		    (collect `(,(if (listp fa) (car fa) fa) ,a)))
+	     ,@(cdr want))
+	  (typelist-get-var (arg-types got) arg-types
+			    :state state :do-types nil)
+	  :state *state*))
+     ;It should be in there now, get it.
+       (fun-get name arg-types :funs funs :state state))
+      ((in-list flags :inline) ;If inline, yank it here.
+      ;TODO namespaces can break it, prevent that from happening.
+       (resolve (let ((want (iter (for el on full-code)
+				  (when (listp (car el))
+				    (return el)))))
+		  `(|let| (,@(iter (for a  in arguments)
+				   (for fa in (car want))
+				   (collect `(,(if (listp fa)
+						   (car fa) fa)
+					       ,a))))
+			  ,@(cdr want)))
+		type-of))
+      (t
+       fun))))
 
 (defun fun-resolve (code type-of &key (state *state*) defer-to-fun)
   "Resolves the functions of the code. (Function inference instead of type\
@@ -131,30 +175,14 @@ Returns the tree with the names replaced with function structs, and\
 	   (types     (iter (for arg in arguments)
 			    (collect (out-type arg))))
 	   (fun (fun-get (car code) types :state state)))
+       (when (null fun) ;Didn't get a function.
+	 (error "Couldn't find function/macro matching: ~D ~D"
+		(car code) types))
+       ;See if have to create/inline function.
+       (setf- fun-check fun types)
        ;Return result.
-       (cond
-	 (fun
-	  (with-slots (flags full-code) fun
-	    (cond
-	      ((in-list flags :inline) ;If inline, yank it here.
-      ;TODO namespaces can break it, prevent that from happening.
-	       (resolve (let ((want (iter (for el on full-code)
-				       (when (listp (car el))
-					 (return el)))))
-			  `(|let| (,@(iter (for a  in arguments)
-					   (for fa in (car want))
-				       (collect `(,(if (listp fa)
-						       (car fa) fa)
-						   ,a))))
-			    ,@(cdr want)))
-			type-of))
-	    ;Return the function with the arguments, converted if needed.
-	      (t
-	       (cons fun
-		     arguments)))))
-	 (t ;TODO conversion functions?
-	  (error "Couldn't find function/macro matching: ~D ~D"
-		 (car code) types))))))))
+       (cons fun arguments))))))
+
 
 ;Not at all tested.
 (defun count-var-dependencies (res &optional so-far)

@@ -1,5 +1,5 @@
 ;;
-;;  Copyright (C) 2009-02-07 Jasper den Ouden.
+;;  Copyright (C) 2009-04-03 Jasper den Ouden.
 ;;
 ;;  This file is part of Lang(working title).
 ;;
@@ -23,12 +23,12 @@
   "Parses a number and returns either an integer or a float.
 Nil if it doesn't recognize it." ;TODO put in proper file.
   (if-use
-   (loop for ch across str
-         for n from 0
-      when (eql ch #\.)
-      return (+ (parse-integer(subseq str 0 n))
-		(* (parse-integer(subseq str (+ n 1)))
-		   (expt 10.0 (- (+ n 1) (length str))))))
+   (iter (for ch in-vector str)
+         (for n from 0)
+	 (when (eql ch #\.)
+	   (return (+ (parse-integer(subseq str 0 n))
+		      (* (parse-integer(subseq str (+ n 1)))
+			 (expt 10.0 (- (+ n 1) (length str))))))))
    (parse-integer str :junk-allowed t)))
 
 (def-conv eval-getstr-code (getstr code :input getstr)
@@ -64,11 +64,10 @@ Nil if it doesn't recognize it." ;TODO put in proper file.
   (fun-resolve input (getf rest :vars)
 	       :state (if-use (getf rest :state) *state*)))
 
-(def-conv eval-res-c (res c :input res) ;TODO rename to c-old.
-  "Evaluate from resolved to C code."
-  (process-code res :state (if-use (getf rest :state) *state*)
-    :ps (make-ps :end-format-str (when (getf rest :fun-level) "return ~D")
-		 :body-level (getf rest :body-level))))
+(def-conv eval-res-c (res c :input res)
+  "Evaluate from resolved to C code." ;TODO intermediate 'res-funarg-debody?
+  (c-body-ize (conv-code (code-funarg-debody res)
+			 *c-conv-state*)))
 
 (def-conv eval-res-lisp (res lisp)
   (conv-code input *lisp-conv-state*))
@@ -78,29 +77,28 @@ Nil if it doesn't recognize it." ;TODO put in proper file.
 
 (def-conv eval-res-sum (res sum)
   "From resolved code to more readable summary."
-  (let ((more-on-fun (getf rest :more-on-fun))
-	(more-on-mac (getf rest :more-on-mac)))
-  (flet ((summary (sub-input)
-	   (evalm res sum sub-input)))
-  (case (type-of input)
-    (cons
-     (loop for el in input collect
-	  (summary el)))
-    (fun
-     (with-slots (name arg-types out-type more-specific) input
-       `(:fun ,name ,arg-types ,out-type
-	      ,@(cond
-		 (more-on-fun
-		  `(:more-specific ,(summary more-specific)))))))
-    (out
-     (with-slots (name out-type code) input
-       (append (list :out name out-type)
-	       (when more-on-mac `(:code ,(summary code))))))
-    (value
-     (with-slots (out-type from) input
-       `(:val ,(summary from) ,out-type)))
-    (t
-     input)))))
+  (destructuring-bind (&key more-on-fun more-on-mac) rest
+    (flet ((summary (sub-input)
+	     (evalm res sum sub-input)))
+      (case (type-of input)
+	(cons
+	 (iter (for el in input)
+	       (collect (summary el))))
+	(fun
+	 (with-slots (name arg-types out-type more-specific) input
+	   `(:fun ,name ,arg-types ,out-type
+		  ,@(cond
+		     (more-on-fun
+		      `(:more-specific ,(summary more-specific)))))))
+	(out
+	 (with-slots (name out-type code) input
+	   (append (list :out name out-type)
+		   (when more-on-mac `(:code ,(summary code))))))
+	(value
+	 (with-slots (out-type from) input
+	   `(:val ,(summary from) ,out-type)))
+	(t
+	 input)))))
 
 ;;Make the chains.
 (chain-convs '(stream getstr code res c))

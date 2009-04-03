@@ -1,5 +1,5 @@
-;
-;;  Copyright (C) 2009-02-07 Jasper den Ouden.
+;;
+;;  Copyright (C) 2009-04-03 Jasper den Ouden.
 ;;
 ;;  This file is part of Lang(working title).
 ;;

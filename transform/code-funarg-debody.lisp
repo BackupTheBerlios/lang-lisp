@@ -1,3 +1,21 @@
+;;
+;;  Copyright (C) 2009-04-03 Jasper den Ouden.
+;;
+;;  This file is part of Lang(working title).
+;;
+;;  Lang is free software: you can redistribute it and/or modify
+;;  it under the terms of the GNU Affero General Public License as published
+;;  by the Free Software Foundation, either version 3 of the License, or
+;;  (at your option) any later version.
+;;
+;;  Lang is distributed in the hope that it will be useful,
+;;  but WITHOUT ANY WARRANTY; without even the implied warranty of
+;;  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;;  GNU Affero General Public License for more details.
+;;
+;;  You should have received a copy of the GNU Affero General Public License
+;;  along with Lang.  If not, see <http://www.gnu.org/licenses/>.
+;;
 
 (in-package #:lang)
 
@@ -48,7 +66,8 @@ TODO figure out flets."
 	     "Does code-funarg-debody for given code, and adds things to be\
  prepended."
 	     (multiple-value-bind (ret more-prepend)
-		 (code-funarg-debody code :body-level bl)
+		 (code-funarg-debody code :body-level bl
+				     :rename-var rename-var)
 	       (setf- append prepend more-prepend)
 	       ret))
 	   (rename-var (name)
@@ -56,9 +75,13 @@ TODO figure out flets."
 	     (let ((new-name (funcall gen-name)))
 	       (setf rename-var (append (list name new-name) rename-var))
 	       new-name))
-	   (get-var (name)
+	   (get-var (var)
 	     "Gets a variable, being name itself when not renamed."
-	     (if-use (getf rename-var name) name)))
+	     (let ((new-name (getf rename-var (from var))))
+	       (if new-name
+		 (list (make-instance 'value
+				      :type (out-type var) :from new-name))
+		 (list var)))))
       (case (type-of (car code))
 	(fun ;Handle arguments of function.
 	 (cond
@@ -71,8 +94,7 @@ TODO figure out flets."
 			    (iter (for c in (cdr code))
 				  (collect (do-code c))))))))
 	(value ;Nothing to handle. (couldnt have cought anything in prepend)
-	 (if (symbolp (car code)) (get-var (car code))
-	                          code))
+	 (if (symbolp (from(car code))) (get-var (car code)) code))
 	(out ;End-macro results.
 	 (case (slot-value (car code) 'name)
 	   (progn
@@ -89,13 +111,15 @@ TODO figure out flets."
 	   (let ;Let, move variables before it.
 	     (cond
 	       (body-level
-		(list (first code) (second code)
-		      (do-code (third code) :bl t)))
+		(c-return (list (first code) (second code)
+				(do-code (third code) :bl t))))
 	       (t ;Add code to prepend, marked as a let.
-		(let ((let-var
-		       (iter (for v in (second code))
-			     (collect `(,(rename-var (car v))
-					,(do-code (cadr v)))))))
+		(let*((done-code (iter (for v in (second code))
+				       (collect (do-code (cadr v)))))
+		      (let-var
+		       (iter (for c in done-code)
+			     (for v in (second code))
+			     (collect `(,(rename-var (car v)) ,c)))))
 		  (setf prepend `(,@prepend (:arg-let ,let-var))))
 		(c-return (do-code (third code))))))
 	   (t

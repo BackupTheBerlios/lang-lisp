@@ -1,0 +1,169 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html> 
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+  <title>READ - Iterate over text files, recognizing strings.</title>
+  <style type="text/css">
+  pre { padding:5px; background-color:#e0e0e0 }
+  h3, h4 { text-decoration: underline; }
+  a { text-decoration: none; padding: 1px 2px 1px 2px; }
+  a:visited { text-decoration: none; padding: 1px 2px 1px 2px; }
+  a:hover { text-decoration: none; padding: 1px 1px 1px 1px; border: 1px solid #000000; } 
+  a:focus { text-decoration: none; padding: 1px 2px 1px 2px; border: none; }
+  a.none { text-decoration: none; padding: 0; }
+  a.none:visited { text-decoration: none; padding: 0; } 
+  a.none:hover { text-decoration: none; border: none; padding: 0; } 
+  a.none:focus { text-decoration: none; border: none; padding: 0; } 
+  a.noborder { text-decoration: none; padding: 0; } 
+  a.noborder:visited { text-decoration: none; padding: 0; } 
+  a.noborder:hover { text-decoration: none; border: none; padding: 0; } 
+  a.noborder:focus { text-decoration: none; border: none; padding: 0; }  
+  pre.none { padding:5px; background-color:#ffffff }
+  </style>
+</head>
+
+<body bgcolor=white>
+
+<h2> READ - Iterate over text files, recognizing strings.</h2>
+
+<br>&nbsp;<br><h3><a class=none name="contents">Contents</a></h3>
+<ol>
+  <li><a href="#download">Download</a>
+  <li><a href="#dictionary">The READ dictionary</a>
+    <ol>
+      <li><a href="#clause-add"><code>clause-add</code></a>
+      <li><a href="#clause-comment"><code>clause-comment</code></a>
+      <li><a href="#clause-line-comment"><code>clause-line-comment</code></a>
+      <li><a href="#first-equal"><code>first-equal</code></a>
+      <li><a href="#get-token"><code>get-token</code></a>
+      <li><a href="#getstr-stream"><code>getstr-stream</code></a>
+      <li><a href="#is-whitespace"><code>is-whitespace</code></a>
+      <li><a href="#reader"><code>reader</code></a>
+    </ol>
+  <li><a href="#ack">Acknowledgements</a>
+</ol>
+
+<br>&nbsp;<br><h3><a class=none name="download">Download</a></h3>
+
+READ together with this documentation can be downloaded from <a
+href="http://weitz.de/files/read.tar.gz">http://weitz.de/files/read.tar.gz</a>. The
+current version is 0.1.0.
+
+<br>&nbsp;<br><h3><a class=none name="dictionary">The READ dictionary</a></h3>
+
+
+
+<!-- Entry for CLAUSE-ADD -->
+
+<p><br>[Function]<br><a class=none name='clause-add'><b>clause-add</b> <i>add <tt>&amp;key</tt> stop</i> =&gt; <i>result</i></a>
+<blockquote><br>
+
+Produces an adding clause getting a symbol.
+
+</blockquote>
+
+<!-- End of entry for CLAUSE-ADD -->
+
+
+<!-- Entry for CLAUSE-COMMENT -->
+
+<p><br>[Function]<br><a class=none name='clause-comment'><b>clause-comment</b> <i>getstr <tt>&amp;optional</tt> str end-comment-str</i> =&gt; <i>result</i></a>
+<blockquote><br>
+
+Zips past the comment. TODO C has escapes for these?
+
+</blockquote>
+
+<!-- End of entry for CLAUSE-COMMENT -->
+
+
+<!-- Entry for CLAUSE-LINE-COMMENT -->
+
+<p><br>[Function]<br><a class=none name='clause-line-comment'><b>clause-line-comment</b> <i>getstr <tt>&amp;optional</tt> str</i> =&gt; <i>result</i></a>
+<blockquote><br>
+
+Zips past line comment. Currently assumes that things are read line by 
+line.
+
+</blockquote>
+
+<!-- End of entry for CLAUSE-LINE-COMMENT -->
+
+
+<!-- Entry for FIRST-EQUAL -->
+
+<p><br>[Function]<br><a class=none name='first-equal'><b>first-equal</b> <i>eql-to str</i> =&gt; <i>result</i></a>
+<blockquote><br>
+
+Sees if the first part of a string is equal to something.
+
+</blockquote>
+
+<!-- End of entry for FIRST-EQUAL -->
+
+
+<!-- Entry for GET-TOKEN -->
+
+<p><br>[Function]<br><a class=none name='get-token'><b>get-token</b> <i>str <tt>&amp;optional</tt> stopchar</i> =&gt; <i>result</i></a>
+<blockquote><br>
+
+Gets a token from a string. Stopchar are characters it stops for, must 
+are characters that must be in there, or it will also stop.
+Returns: the string token, the ending index, the element it stopped at.
+
+</blockquote>
+
+<!-- End of entry for GET-TOKEN -->
+
+
+<!-- Entry for GETSTR-STREAM -->
+
+<p><br>[Function]<br><a class=none name='getstr-stream'><b>getstr-stream</b> <i>stream</i> =&gt; <i>result</i></a>
+<blockquote><br>
+
+A getstr for functions taking one.
+
+</blockquote>
+
+<!-- End of entry for GETSTR-STREAM -->
+
+
+<!-- Entry for IS-WHITESPACE -->
+
+<p><br>[Function]<br><a class=none name='is-whitespace'><b>is-whitespace</b> <i>ch</i> =&gt; <i>result</i></a>
+<blockquote><br>
+
+
+
+</blockquote>
+
+<!-- End of entry for IS-WHITESPACE -->
+
+
+<!-- Entry for READER -->
+
+<p><br>[Function]<br><a class=none name='reader'><b>reader</b> <i>str getstr whitespace clauses <tt>&amp;key</tt> limit</i> =&gt; <i>result</i></a>
+<blockquote><br>
+
+General reading, str is first string, getstr gets subsequent strings as 
+needed, until it returns nil.
+Clauses is pairs of expected words and the functions get the string beyond,
+what these functions return is where reader continues.
+
+</blockquote>
+
+<!-- End of entry for READER -->
+
+
+<br>&nbsp;<br><h3><a class=none name="ack">Acknowledgements</a></h3>
+
+<p>
+This documentation was prepared with <a href="http://weitz.de/documentation-template/">DOCUMENTATION-TEMPLATE</a>.
+</p>
+<p>
+$Header: /usr/local/cvsrep/documentation-template/output.lisp,v 1.14 2008/05/29 08:23:37 edi Exp $
+<p><a href="http://weitz.de/index.html">BACK TO MY HOMEPAGE</a>
+
+</body>
+</html>

@@ -28,7 +28,7 @@
 (load "read/read.lisp")
 (load "read/read-lang.lisp")
 
-(defpackage #:lang
+(defpackage #:lang ;;TODO chop package up.
   (:use #:common-lisp #:iterate
 	#:generic #:argument #:namespace #:read-lang))
 ;Function and macro to get stuff from a list like a macro.
@@ -51,15 +51,23 @@
 
 (load "core/states.lisp")  ;Extensions of the state that macros/output use.
 
-;Chaining operations.
-(load "other/chain.lisp")
-(load "other/chain-lang.lisp")
-
-;Macros that you need to actually do anything with it.
+;Base macros.
 (load "macs/macs.lisp")
 (load "macs/fun.lisp")
 (load "macs/loops.lisp")
 (load "macs/struct.lisp")
+
+;Transformation.
+(load "transform/code-funarg-debody.lisp") ;Needed for conversion to C.
+
+;Output.
+(load "convert/conv.lisp")
+(load "convert/lisp.lisp")
+(load "convert/c.lisp") ;Uses function-argument debodying.
+
+;Chaining operations.
+(load "other/chain.lisp")
+(load "other/chain-lang.lisp")
 
 ;Macros, functions and types regarding:
 (load "types/any.lisp")
@@ -67,15 +75,6 @@
 (load "types/numbers.lisp")
 (load "types/ptr.lisp")
 (load "types/ref.lisp")
-
-;TODO ;Transformations making things qualify for outputs. (Like to C)
-
-;Output.
-(load "convert/conv.lisp")
-(load "convert/conv-lisp.lisp")
-
-;Old output method.
-(load "convert/to-c.lisp")
 
 ;;Auto-documentation stuff.
 (require :asdf)

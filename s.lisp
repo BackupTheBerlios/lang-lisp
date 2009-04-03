@@ -22,7 +22,7 @@
 
 (in-package #:lang)
 
-(evalm str c "progn 50.9")
+(conv-c-state-changed *c-conv-state* :in 'miauw)
 
 ;TODO too much breakage..
 (evalm str res "progn-raw
@@ -32,43 +32,46 @@
 
 (print 'a)
 
-(evalm str sum "progn-raw
+(evalm str c "progn-raw
   (let (a 2;)
     (namespace mew
      (let (b 2;)
-       (* a b)))" :body-level t :fun-level t)
+       (* a b)))")
 
 ;Hmm, doesn't work for to C, does work to summary.
 (evalm str c "progn-raw (defun name (x (any);) x)")
 
-(evalm str c "progn-raw
+(evalm str res "progn-raw
   (defun meh (a (int64); b (int64)) (+ (* a b) b a))" :body-level t)
 ;Note: this one needs meh )defined above
 (evalm str c "progn-raw
   (let (a 3 ; b 6) |
-    + a (bit-or (+ a 6 1) (meh a b));)" :body-level t :fun-level t)
+    + a (bit-or (+ a 6 1) (meh a b));)")
+
+(evalm str c
+       "progn (let ((a (+ 1 (+ 1 2))) (b 2)) (meh (* (+ 2 3) a) b))")
 
 ;TODO decrease dud variables in C output.
 
-(evalm res lisp (code-funarg-debody(evalm str res
-					 "progn-raw (let ((x 3)) 1 x) 3 4")))
+;TODO it lost the first let, setting c,
+; Hmm, it is when more then one element in progn.
+(evalm str lisp "progn-raw
+  (let (a 45 ; b 61)
+    (+ (let ((q 3)) (+ q 2)) 6)
+    (progn 5 6 2)
+    (+ a (let ((c (* (let ((d a)) (+ b d)) 2))) 1 (* c b))))")
 
+(macroexpand-1 '
+(argumentize-list ((a b) c) '((1 2) 3)
+		 (list a b c)))
 
-(evalm res lisp (code-funarg-debody(evalm str res "progn-raw
-  (let (a 45 ; b 61) |
-    progn 5 6 2;
-    + a (let ((c (* (let ((d a)) 81 (+ b d)) 2))) 1 | * c b;);"
-  :body-level t :fun-level t)))
-
-;TODO to-c must recognize loop-like macros again.
-(evalm str sum "progn-raw
-  (let (a 56 ; b 6) |
-    while (a) (sqr b);
-    |a" :body-level t)
+;TODO bug
+(evalm str lisp "progn | meh 2 5;
+  while (2) (meh 1 2) 1;")
 
 ;TODO decrease the ammount of scopes in stuff like this..
 (evalm str c "progn-raw
-  (let (a 56;) (let ((ref b) 2;) (+ a b)))" :body-level t)
+  (let (a 56;) (let ((ref b) 2;) (+ a b)))")
 
 (slot-value *state* 'manual-type-coarser)
 

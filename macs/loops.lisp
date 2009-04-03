@@ -19,19 +19,14 @@
 (in-package #:lang)
 
 ;;Loops
-(rawmac-add raw-while () () (cond &rest body)
-  "Same as while, but no optional returing of value. Made it so that\
- conversion is easier."
-  `(,(make-instance 'out :name 'while :type '(|void|))
-     ,(fun-resolve cond type-of)
-     ,(fun-resolve `(progn-raw ,@body) type-of)))
-
-(mac-add while () () ((cond &optional return) &rest body)
+(rawmac-add while () () ((cond &optional return) &rest body)
   "Does something while condition true."
-  (if return
-    `(progn (raw-while ,cond ,@body)
-	    ,return)
-    `(raw-while ,cond ,@body)))
+  (let ((res (fun-resolve return type-of))) 
+  `(,(make-instance 'out :name 'progn :type (out-type res))
+    (,(make-instance 'out :name 'while :type '(|void|))
+     ,(fun-resolve cond type-of)
+     ,(fun-resolve `(progn-raw ,@body) type-of))
+    ,res)))
 
 (mac-add do () () ((&rest vars) (cond &optional return) &rest body)
   "Same do as that of lisp.(However variables made in sequence.)"
