@@ -18,71 +18,73 @@
 ;;
 (in-package #:lang)
 
-(defclass fun (typeset-named)
-;  A function with types for result and arguments. contains a list of more
-;   specific functions.
-  ((out-type  :initarg :out-type  :initform nil :accessor out-type)
-   (code      :initarg :code      :initform nil :accessor code)
-   (full-code :initarg :full-code :initform nil :accessor full-code)
-   (args-code :initarg :args-code :initform nil)
-   
- ;Flags are: :check-eql*, :inline..
-   (flags     :initarg :flags :initform nil)
-   
-   (doc-str :initarg :doc-str :initform "" :type string)
+(defclass fun-variant ()
+  ((arg-types :documentation "Types of the arguments."
+	      :initarg :arg-types :type list)
+   (res :documentation "Resolved code."
+	:initarg :res)
+   (names :documentation "Names the function has in different output\
+ languages."
+    :initarg :names :initform nil :type list)))
 
-   (names :initarg :names :initform nil :type list))
-  (:documentation "Holds the information of functions in Lang.
-In resolved code, it should be first of a list, (possibly)followed by\
- arguments"))
+(defclass fun (documented)
+  ((name :initform nil :type (or null symbol) :initarg :name)
+   
+   (out-type-fn :documentation "Possibly a function, if returns non-nil,\
+ overrides out-type."
+    :initarg :out-type-fn :initform nil :type (or function null))
+   
+   (args-code :documentation "Arguments of the function."
+    :initarg :args-code :initform nil)
+   (body-code :documentation "Body of the code, as it was entered."
+    :initarg :body-code :initform nil)
+   
+   (flags :documentation "Flags the code has."
+	  :initarg :flags :initform nil)
+   
+   (variants :documentation "Already encounted variants."
+	     :initform nil :initarg :variants :type list)
+   
+   (names
+    :documentation "Names the function has in different output languages."
+    :initarg :names :initform nil :type list))
+  (:documentation "Holds the information of functions in Lang."))
 
-;The reason this function is more complicated then just a wrapper round 
-;named-typeset-get is that it also handles functions that are to be 
-;specified as used. TODO move that to resolve?
-(defun fun-get (name arg-types
-		     &key funs (state *state*))
+(defun function-p (obj)
+  (eql (type-of obj) 'fun))
+
+(defmethod out-type ((fun fun))
+  (with-slots (variants) fun
+    (case (length variants)
+      (0 '(|unused-fun|))
+      (1 `(|function| ,@(slot-value (car variants) 'arg-types)))
+      (t `(|or|
+	   ,@(iter (for v in variants)
+		   (collect `(|function| ,@(slot-value v 'arg-types)))))))))
+
+(defmethod out-type ((list list))
+  (out-type (car list)))
+
+(defun fun-get (local name)
   "Gets the function."
-  (unless funs (setf funs (slot-value state 'funs)))
-  (named-typeset-get name arg-types funs :state state))
+  (symget local *funs* name))
 
-(defun (setf fun-get) (to name arg-types &key funs (state *state*))
-  "Adds a function.(Does not replace old function unless exact!)
-Warning: arg types of the added function must be correct!"
-  (declare (type fun to))
-  (unless funs (setf funs (slot-value state 'funs)))
-  (setf (named-typeset-get name arg-types funs :state state) to))
+(defun (setf fun-get) (to local name)
+  "Adds a function.(Does not replace old function unless exact!)"
+  (setf (symget local *funs* name) to))
 
-(defmacro fun-add (name arg-types (&key (state '*state*)) &rest rest)
+(defmacro fun-add (local name &rest rest)
   "Makes a function with (setf fun-get), shaves off make-instance."
-  (with-gensyms (the-args the-name state-var)
-    `(let*((,state-var ,state)
-	   (,the-args ,arg-types) (,state-var ,state)
+  (with-gensyms (the-name *local)
+    `(let*((,*local ,local)
 	   (,the-name ,name))
-       (setf (fun-get ,the-name ,the-args :state ,state-var)
-	     (make-instance 'fun
-		:name (namespace-symbol ,the-name ,state-var)
-		:arg-types ,the-args
-		,@rest)))))
+       (setf (fun-get ,*local ,the-name)
+	     (make-instance 'fun :name ,the-name ,@rest)))))
 
-;;Conversion, getting and setting.
-(defun conv-get (from-tp to-tp &key (state *state*))
-  "Gets the conversion"
-  (typeset-get (slot-value state 'conversion) `(,from-tp ,to-tp)
-	       :state state :no-conversion t))
-
-(defun (setf conv-get) (to from-tp to-tp &key (state *state*))
-  "Sets the conversion"
-  (setf (typeset-get (slot-value state 'conversion) `(,from-tp ,to-tp)
-		     :state state :no-conversion t)
-	to))
-
-(defmacro conv-add (name from-tp to-tp (&key (state '*state*)) &rest rest)
-  "Makes a conversion function."
-  (with-gensyms (the-args state-var)
-    `(let*((,state-var ,state)
-	   (,the-args `(,,from-tp ,,to-tp)) (,state-var ,state))
-       (setf (conv-get ,the-args :state ,state-var)
-	     (make-instance 'fun
-		:name (namespace-symbol ,name ,state-var)
-		:arg-types ,the-args :out-type (cadr ,the-args)
-		,@rest)))))
+(defmacro extend-if-nil (fun (&rest args) &body new)
+  "The extension must have the same arguments as the new one.\
+ Doesn't do any &rest &optional etc. currently."
+  (with-gensyms (old-fun)
+    `(let ((,old-fun ,fun))
+       (lambda (,@args)
+	 (if-use (funcall ,old-fun ,@args) (progn ,@new))))))

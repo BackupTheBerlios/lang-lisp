@@ -22,40 +22,39 @@
 ;Handy macros.
 (load "other/generic.lisp")
 
+(load "other/documented.lisp")
 (load "other/namespace.lisp")
 (load "other/argument.lisp")
 
 (load "read/read.lisp")
 (load "read/read-lang.lisp")
 
+(load "other/chain.lisp")
+
 (defpackage #:lang ;;TODO chop package up.
-  (:use #:common-lisp #:iterate
+  (:use #:common-lisp #:iterate #:documented
+	#:chain
 	#:generic #:argument #:namespace #:read-lang))
 ;Function and macro to get stuff from a list like a macro.
 
 (in-package #:lang)
-(defvar *state*)
 
-;The code that does the processing to an s-expression with the functions and
-;values entirely specified as objects with arguments and return types.
-(load "core/fun-base.lisp")
+(load "other/chain-lang.lisp")
 
-(load "core/type-util.lisp")
-(load "core/type-coarser.lisp")
-(load "core/typeset.lisp")
+(load "core/state.lisp")
 
-(load "core/typeset-named.lisp")
 (load "core/fun-get.lisp")
 (load "core/mac-get.lisp")
-(load "core/fun-resolve.lisp")
 
-(load "core/states.lisp")  ;Extensions of the state that macros/output use.
+(load "core/local.lisp")
+(load "core/resolve.lisp")
 
 ;Base macros.
 (load "macs/macs.lisp")
 (load "macs/fun.lisp")
-(load "macs/loops.lisp")
-(load "macs/struct.lisp")
+
+;Types.
+(load "types/numbers.lisp")
 
 ;Transformation.
 (load "transform/code-funarg-debody.lisp") ;Needed for conversion to C.
@@ -64,41 +63,3 @@
 (load "convert/conv.lisp")
 (load "convert/lisp.lisp")
 (load "convert/c.lisp") ;Uses function-argument debodying.
-
-;Chaining operations.
-(load "other/chain.lisp")
-(load "other/chain-lang.lisp")
-
-;Macros, functions and types regarding:
-(load "types/any.lisp")
-(load "types/eql.lisp")
-(load "types/numbers.lisp")
-(load "types/ptr.lisp")
-(load "types/ref.lisp")
-
-;;Auto-documentation stuff.
-(require :asdf)
-(asdf:operate 'asdf:load-op :documentation-template)
-
-(defun doc-template-document ()
-  "Automatically documents langs functions with documentation-template."
-  (documentation-template:create-template (find-package '#:lang)
-    :subtitle "The main project."
-    :target "doc/autodoc/dt-lang.html")
-  (documentation-template:create-template (find-package '#:argument)
-    :subtitle "Iteration over arguments like macros take."
-    :target "doc/autodoc/dt-argument.html")
-  (documentation-template:create-template (find-package '#:namespace)
-    :subtitle ""
-    :target "doc/autodoc/dt-argument.html")
-  (documentation-template:create-template (find-package '#:read)
-    :subtitle "Iterate over text files, recognizing strings."
-    :target "doc/autodoc/dt-read.html"))
-;  (documentation-template:create-template (find-package '#:read-c)
-;    :subtitle "Reading C headers."
-;    :target "doc/autodoc/dt-read-c.html"))
-
-;Doesn't work, probably package troubles?
-;(require :tinaa)
-;
-;(tinaa:document-system :package '#:lang "doc/autodoc/tinaa-lang.html")

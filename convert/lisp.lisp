@@ -17,56 +17,65 @@
 ;;  along with Lang.  If not, see <http://www.gnu.org/licenses/>.
 ;;
 
+;;TODO Make declarations from info lang has..
+
 (in-package #:lang)
 
 (defvar *conv-lisp-macs* (make-hash-table))
 
-(make-conv *conv-lisp-macs* 'progn (&rest body)
-  `(progn ,@(iter (for c in body)
-		  (collect (conv c)))))
+(defmacro conv-body (body)
+  `(iter (for el in ,body)
+	 (collect (conv el))))
 
-(make-conv *conv-lisp-macs* 'let (vars body)
+;TODO Ok, how to use lisp via this properly? Want to use common lisps\
+; capabilities, rather then redoing it.
+; Problem is we don't know how it will be used.
+(make-conv *conv-lisp-macs* 'fun (name variants flags args-code body-code)
+  (if (in-list flags :is-defun)
+    `(function ,(get-name code :lisp)) ;Should have registered.
+    (case (length variants)
+      (0 '(values)) ;Return nothing, nothing being done with result.
+      (1 `(lambda (,@args-code) ;One thing being done with it.
+	    ,(conv-code (slot-value (car variants) 'res) conv-macs)))
+      (t `(lambda (,@args-code)
+  ;Unclear what is being done with it, unfortunately have to see at 
+  ;run-time what is done.
+	    ,@(conv-code (combine-variants code)))))))
+
+(make-conv *conv-lisp-macs* '-progn (body)
+  `(progn ,@(conv-body body)))
+
+(make-conv *conv-lisp-macs* '-let (vars body)
   `(let (,@(iter (for v in vars)
 		 (collect `(,(first v)
 			     ,(conv (second v))))))
-     ,(conv body)))
+     ,@(conv-body body)))
 
 (make-conv *conv-lisp-macs* 'while (cond body)
   `(do () ((not ,(conv cond)) (values))
-     ,(conv body)))
+     ,@(conv-body body)))
 
-(make-conv *conv-lisp-macs* 'void-end ()
-  '(values))
+(make-conv *conv-lisp-macs* 'value (from)
+  from)
 
-(defun lisp-conv-fun (code conv-state)
-  "Function useage conversion to lisp."
-  (let ((fun (car code)))
-    `(,(if-use (if-use (get-name fun :lisp) (get-name fun :usual))
-	       (setf (get-name fun :lisp) (gensym))) ;If no name yet, set one.
-       ,@(iter (for c in (cdr code))
-	       (collect (conv-code c conv-state))))))
+(make-conv *conv-lisp-macs* 'applied-fun (fun args)
+  `(,(if-use (if-use (get-name fun :lisp) (get-name fun :usual))
+	     (setf (get-name fun :lisp) (gensym))) ;If no name yet, set one.
+     ,@(iter (for c in args)
+	     (collect (conv c)))))
 
-(defun lisp-conv-value (code conv-state)
-  "Value useage conversion to lisp."
-  (declare (ignored conv-state))
-  (from (car code)))
-
-(defvar *lisp-conv-state*
-  (make-conv-state #'lisp-conv-fun #'lisp-conv-value *conv-lisp-macs*)
-  "Conversion state for converting to lisp.")
-
-(defun lisp-conv-fun (fun &optional (conv-state *lisp-conv-state*))
+(defun lisp-conv-fun (fun &optional (conv-macs *conv-lisp-macs*))
   "Converts a single function."
   (with-slots (args-code code) fun
     `(defun ,(get-name fun :lisp)
 	 (,@(iter (for a in args-code)
 		  (collect (if (listp a) (car a) a))))
-       ,(conv-code code conv-state))))
+       ,(conv-code code conv-macs))))
 
-(defun lisp-conv-all-fun (state &optional (conv-state *lisp-conv-state*))
+(defun lisp-conv-all-fun (state &optional (conv-macs *conv-lisp-macs*))
   "Converts all functions in state, outputs them in list."
   (with-slots (funs) state
     (iter (maphash (lambda (key fun)
-		     (collect (lisp-conv-fun fun conv-state)))
+		     (collect (lisp-conv-fun fun conv-macs)))
 		   funs)
 	  (finish))))

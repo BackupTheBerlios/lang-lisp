@@ -30,38 +30,41 @@
     ((keywordp (caar prepend))
      (case (caar prepend)
        (:arg-let  ;It is a let, make it and put stuff subordinate.
-	`(,(make-instance 'out :name 'let)
-	  ,(second(car prepend))
-	  ,(actually-prepend res (cdr prepend))))
+	(make-let (cadar prepend)
+		  (list (actually-prepend res (cdr prepend)))))
+     ;TODO WTF: replace make-let with list.
        (t
 	(error "Prepending keyword not recognized."))))
     (t ;It is like a progn, put in-series.
-     (cons (make-instance 'out :name 'progn)
-	   (iter
-	     (for p on prepend)
-	     (cond
-	       ((keywordp (car p)) ;Keywords need sub-let (or similar).
-		(collect (actually-prepend res p))
-		(finish))
-	       ((null (cdr p)) ;End of the line, end with result.
-		(collect (car p))
-		(collect res))
-	       (t ;Not end of the line, just prepend.
-		(collect (car p)))))))))
+     (make-progn
+      (iter
+	(for p on prepend)
+	(cond
+	  ((keywordp (caar p)) ;Keywords need sub-let (or similar).
+	   (collect (actually-prepend res p))
+	   (finish))
+	  ((null (cdr p)) ;End of the line, end with result.
+	   (collect (car p))
+	   (collect res))
+	  (t ;Not end of the line, just prepend.
+	   (collect (car p)))))))))
 
-(defun code-funarg-debody (code &key (body-level t)
-			   rename-var (gen-name #'gensym))
+;;TODO improve, maybe some variable tracker-along-function?
+(defun code-funarg-debody
+    (code &key (body-level t)
+     rename-var
+     (gen-name (lambda (name) (format nil "~D_~D" name (gensym)))))
   "Transforms code, taking out all the progns and lets in argument.
 This is needed for converting to C, which doesn't allow for bodies or\
  variable creation in arguments.
 TODO figure out flets."
-  (unless (listp code)
-;    (warn (format nil "Process-code accidentally ate a non-list. ~D" code))
-    (setf- list code))
+;  (print (list code :bl body-level))
   (let (prepend) ;Stuff, body and variables that needs to be prepended.
     (flet ((c-return (code)
 	     "Returns code with any added things to be prepended."
-	     (values code prepend))
+	     (if body-level
+	       (actually-prepend code prepend)
+	       (values code prepend)))
 	   (do-code (code &key (bl nil))
 	     "Does code-funarg-debody for given code, and adds things to be\
  prepended."
@@ -69,58 +72,53 @@ TODO figure out flets."
 		 (code-funarg-debody code :body-level bl
 				     :rename-var rename-var)
 	       (setf- append prepend more-prepend)
-	       ret))
-	   (rename-var (name)
-	     "Renames a variable to avoid name clashes."
-	     (let ((new-name (funcall gen-name)))
-	       (setf rename-var (append (list name new-name) rename-var))
-	       new-name))
-	   (get-var (var)
-	     "Gets a variable, being name itself when not renamed."
-	     (let ((new-name (getf rename-var (from var))))
-	       (if new-name
-		 (list (make-instance 'value
-				      :type (out-type var) :from new-name))
-		 (list var)))))
-      (case (type-of (car code))
-	(fun ;Handle arguments of function.
-	 (cond
-	  ;Actually prepends the stuff that the rest in effect asks for.
-	   (body-level
-	    (let ((res (do-code code)))
-	      (actually-prepend res prepend)))
-	   (t
-	    (c-return (cons (car code)
-			    (iter (for c in (cdr code))
-				  (collect (do-code c))))))))
-	(value ;Nothing to handle. (couldnt have cought anything in prepend)
-	 (if (symbolp (from(car code))) (get-var (car code)) code))
-	(out ;End-macro results.
-	 (case (slot-value (car code) 'name)
-	   (progn
+	       ret)))
+     (flet ((do-body (code &key (bl nil))
+	     (iter (for c in code)
+		   (collect (do-code c :bl bl))))
+	    (rename-var (name)
+	      "Renames a variable to avoid name clashes."
+	      (let ((new-name (funcall gen-name name)))
+		(setf rename-var (append (list name new-name) rename-var))
+		new-name))
+	    (get-var (var)
+	      "Gets a variable, being name itself when not renamed."
+	      (let ((new-name (getf rename-var (from var))))
+		(if new-name
+		    (make-instance 'value
+				   :type (out-type var) :from new-name)
+		    var))))
+       (c-return
+	(case (type-of code)
+	  (applied-fun
+	   (with-slots (fun args out-type) code
+	     (make-instance 'applied-fun
+	       :fun fun :args (do-body args) :out-type out-type)))
+	  (-progn
+	   (with-slots (body) code
 	     (cond
 	       (body-level
-		(cons (car code)
-		      (iter (for c in (cdr code))
-			    (collect (do-code c :bl t)))))
+		(make-progn (do-body body :bl t)))
 	       (t ;Add code to prepend. 
-		(setf- append prepend
-		       (iter (for c in (butlast (cdr code)))
-			     (collect (do-code c :bl t))))
-		(c-return (do-code (car(last code)))))))
-	   (let ;Let, move variables before it.
-	     (cond
-	       (body-level
-		(c-return (list (first code) (second code)
-				(do-code (third code) :bl t))))
-	       (t ;Add code to prepend, marked as a let.
-		(let*((done-code (iter (for v in (second code))
-				       (collect (do-code (cadr v)))))
-		      (let-var
-		       (iter (for c in done-code)
-			     (for v in (second code))
-			     (collect `(,(rename-var (car v)) ,c)))))
-		  (setf prepend `(,@prepend (:arg-let ,let-var))))
-		(c-return (do-code (third code))))))
-	   (t
-	    code)))))))
+		(setf- append prepend (do-body (butlast body)))
+		(do-code (car(last body)))))))
+	  (-let ;Let, move variables before it.
+	   (with-slots (vars body) code
+	     (let ((done-vars
+		    (iter (for v in vars)
+			  (collect (list (car v) (do-code (cadr v)))))))
+	       (cond
+		 (body-level
+		  (make-let done-vars (do-body body :bl t)))
+		 (t ;Add code to prepend, marked as a let.
+		  (let ((let-var
+			 (iter
+			   (for c in done-vars)
+			   (for v in vars)
+			   (collect `(,(rename-var (car v)) ,(cadr c))))))
+		    (setf prepend `(,@prepend (:arg-let ,let-var)))
+		    (do-code (make-progn body))))))))
+	  (value
+	   (if (symbolp (from code)) (get-var code) code))
+	  (t
+	   (error "Did not recognize end-structure. ~D" code))))))))

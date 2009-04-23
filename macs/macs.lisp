@@ -18,83 +18,36 @@
 ;;
 (in-package #:lang)
 
-(mac-add quote () () (symbol)
+(mac-add |quote| () (symbol)
   (cond
     ((symbolp symbol)
      (make-instance 'value :type `(eql ,symbol) :from symbol))
     (t
      (error "quote does not quote anything else then symbols yet."))))
 
-(mac-add const () () (const)
-  (make-instance 'value :type `(|eql| ,const) :from const))
+(defun resolve-body (local body)
+  (iter (for c in body)
+	(collect (all-resolve local c))))
 
-(rawmac-add namespace () () (name &rest body)
-  (with-namespace name state
-    (lambda () (fun-resolve `(progn ,@body) type-of))))
+(mac-add |namespace| (:*local local) (name &rest body)
+  (make-namespace :ns name :body (resolve-body local body)))
 
-(mac-add progn () () (&rest body)
-  (case (length body)
-    (1 (car body))
-    (t `(progn-raw
-	 ,@(loop for c in body
-	      if (when (listp c) (case (car c) ((progn |progn|) t)))
-	      append (cdr c)
-	      else collect c)))))
-    
-;;Body-like stuff
-(rawmac-add progn-raw () () (&rest body)
-  "A function body. All things with function bodies pass through here."
-  (setf body (loop for b in body
-		if (and* (listp b) (case (car b) ((progn |progn|) t)))
-		append (cdr b)
-		else
-		collect b))
-  (let ((res (loop for c in body
-		collect (fun-resolve c type-of :state state))))
-    `(,(make-instance 'out :name 'progn :code res
-		      :type (out-type(car(last res))))
-       ,@res)))
+(mac-add |progn| (:*local local) (&rest body)
+  (make-progn (resolve-body local body)))
 
-(rawmac-add let () () ((&rest varlist) &rest body)
-  "Makes variables. Made in sequence."
-  (let*((var-list ;List that will later be part of output.
-	 (iter (for c in varlist)
-	       (collect
-		   (argumentize-list (name value) c
-		     (let ((res (fun-resolve value type-of))
-			   (name (if (listp name) (cadr name) name)))
-  		    ;Make variable in namespace.
-		       `(,(namespace-symbol name state) ,res))))))
-	(new-type-of ;Add some types.
-	 (append
-	  (iter (for c in varlist)
-		(for el in var-list)
-		(collect `(,(car el)
-			,(let ((out-type (out-type (cadr el))))
-			      (cond
-				((not(listp (car c)))
-				 out-type)
-				((eql (caar c) '|ref|)
-				 (case (when (not (listp out-type))
-					 (car out-type))
-				   (|ref| out-type) ;Already settable.
-				   (t     `(|ref-var| ,out-type)))))))))
-	  type-of))
-      ;Resolve output. (Doesn't have a progn-like thing at its end.)
-	(out-res  (fun-resolve `(progn-raw ,@body) new-type-of)))
-   ;Construct output code.
-    (if (null var-list)
-      out-res 
-      `(,(make-instance 'out :name 'let :code out-res
-			:type (out-type out-res))
-	 ,var-list
-	 ,out-res))))
-
-(mac-add let1 () () ((var to) &rest body)
-  "Make single variable."
-  `(let ((,var ,to)) ,@body))
+(mac-add |let| (:*local local) ((&rest vars) &rest body)
+  "Makes variables. Made in sequence. Rawmac since variables need\
+ resolving. Uses :again to resolve body too."
+  (let ((out-let (make-let (iter (for v in vars)
+				  (collect
+				      (if (listp v)
+					  `(,(car v) 
+					     ,(all-resolve local (cadr v)))
+					  `(,v nil)))) nil)))
+    (setf- update-local local out-let)
+    (setf (slot-value out-let 'body) (resolve-body local body))
+    out-let))
 
 
-(mac-add let-ret () () ((ret-var to) &rest body)
-  "Let1, but returns the variable."
-  `(let ((,ret-var ,to)) ,@body ,ret-var))
+
+

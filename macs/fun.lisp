@@ -18,185 +18,87 @@
 ;;
 (in-package #:lang)
 
-(defun function-creator (out-name code type-of &key state)
-  "Creates functions. (Used in lang macros flet, defun and lambda.)"
-  (let ((name (car code)) (rest (cdr code)) only-record
-	got-flags)
-  ;See if there are any relevant markers.
-    (loop while (symbolp (car rest))
-       do (case (car rest)
-	    (|:inline|
-	     (push :inline got-flags))
-           ;Only makes a record of it, intended to be used along with 
-           ; :specify-as-used (If true, only more specific versions usable.
-	    (|:only-record|
-	     (setf only-record t)
-	     (push :only-record got-flags))
-           ;Creates the more specific functions if they are used.
-	    (|:specify-as-used| (push :specify-as-used got-flags)))
-       do (setf- cdr rest))
-    (argumentize-list ((&rest args) &rest body) rest
-      (setf args (loop for a in args collect (if (listp a) a `(,a (any)))))
-  ;Explicitly specified out-type.
-      (let*((doc-str (when (stringp (car body))
-		       (let ((tmp (car body)))
-			 (setf- cdr body) tmp)))
-	    (res (unless only-record
-		   (fun-resolve `(progn-raw ,@body) (append type-of args)
-			    :state state)))
-	    (arg-types
-	     (loop for a in args
-		collect (if (listp a) (cadr a) `(,a (any)))))
-           ;Add function.
-	    (fun (fun-add name arg-types (:state state)
-			  :flags (append got-flags
-				  (case out-name 
-				    (lambda '(:lambda))
-				    (flet   '(:flet))))
-			  :doc-str (if-use doc-str "")
-			  :full-code `(defun ,@code) :code res
-			  :out-type (if only-record '(error)
-				      (out-type(car res))))))
-      ;Return the function. (Although not really meant as used functionally.)
-      ;Lambda would be for that.
-	`(,(make-instance 'out :name out-name
-			  :type `(function ,(if only-record '(error)
-					      (out-type(car res)))
-					   ,@arg-types))
-	   ,fun)))))
+(mac-add |defun| () (name (&rest args) &rest body)
+  `(|set| (|fun-of| (|quote| ,name))
+	  (|named-lambda| ,name (,@args)
+	     ,@body)))
 
-(rawmac-add defun (:code code) () (name &rest stuff)
-  "Defines a function. usage:
- (defun [name] [keywords] ([argument-type-pairs]) [documentation-string]\
- [body])
-If name is (set name) instead it describes how to set something, first 
-argument is what it sets to."
+(mac-add |set| (:*local local) (to-set to-val)
   (cond
-    ((listp name)
-     (unless (eql (car name) '|set|)
-       (error "Invalid form of defun."))
-     (values `(defun ,(intern (format nil "set_~D" (cadr name))) ,@stuff)
-	     :again))
-    (t
-     (function-creator 'defun (cdr code) type-of :state state))))
+    ((listp to-set)
+     (cond 
+       ((and (eql (car to-set) '|fun-of|)
+	     (eql (caadr to-set) '|quote|))
+	(let ((res (all-resolve local to-val)))
+;	  (unless (function-p res)
+;	    (error "Direct s-expression functions; as given by\
+; (fun-of symbol) must be functions."))
+	  (setf (fun-get local (cadadr to-set))
+		res)))))))
 
-(rawmac-add set () () (what to)
-  "Set variables, references and settable functions."
-  (let ((to (fun-resolve to type-of)))
+(defun read-declaration (declarations local args body)
+  (let (variants flags always-inline out-type-fn)
+    (dolist (el declarations) ;Iterate all the declarations.
+      (case (car el)
+	(|specify| ;Make more specified variants based on declaration.
+	 (unless always-inline
+	   (push (make-variant
+		  local (if-use (cadr el) (gensym)) args (cddr el) body)
+		 variants)))
+	(|out-type-fn| ;Provide function that calculates the resulting-type.
+	 (setf out-type-fn ;Newer ones override older ones. (TODO warnings?)
+	       (all-resolve local (cadr el))))
+	(|flags| ;Provide flags in bulk.
+	 (dolist (f (cdr el))
+	   (when (eql f '|:always-inline|)
+	     (setf always-inline t)
+	     (setf variants nil)))
+	 (setf- append flags (cdr el)))
+	(|always-inline| ;Inline in every case. (Makes variants useless.)
+	 (setf always-inline t)
+	 (setf variants nil)
+	 (push '|:always-inline| flags))
+	(|otherwise-inline| ;Inline if specified not found.
+	 (push '|:otherwise-inline| flags))))
+    (values variants flags always-inline out-type-fn)))
+
+(mac-add |named-lambda| (:*local local) (name (&rest args) &rest body)
+  "Raw version of lambda."
+  (let ((doc-str (when (stringp (car body)) (car body))))
+    (when (stringp (car body))
+      (setf- cdr body))
+    (multiple-value-bind (variants flags always-inline out-type-fn)
+	   (when (and (listp (car body)) (eql (caar body) '|declare|))
+	     (read-declarations (cdar body) local args body))
+      (make-instance 'fun :name name 
+        :doc-str doc-str :out-type-fn out-type-fn
+	:args-code args :body-code body
+	:variants variants
+	:flags flags))))
+
+(mac-add |lambda| () ((&rest args) &rest body)
+  "Creation of anonymous functions."
+  `(|named-lambda| ,(gensym) (,@args) ,@body))
+
+(mac-add |declare-for| (:*local local) (for &rest declarations)
+  "Declaring things for functions and such.(TODO function-p)"
+  (let ((res (all-resolve local for)))
     (cond
-      ((symbolp what)
-       (let ((what (value-resolve what type-of :state state)))
-	 (unless (type-coarser (out-type what) (out-type to) :state state)
-	   (error "Trying to set a variable to something it is not \
-general enough for."))
-	 `(,(make-instance 'out :name 'set) ,what ,to)))
-      ((listp what)
-       (values `(,(intern (format nil "set_~D" (car what)))
-		  ,to ,(cdr what))
-	       :again))
+      ((function-p res)
+       (let ((fun (fun-via res)))
+	 (with-slots (args-code body-code variants flags) fun
+	   (multiple-value-bind (n-variants n-flags always-inline 
+				 n-out-type-fn)
+	       (read-declarations declarations local args-code body-code)
+	     (setf- append variants n-variants)
+	     (when always-inline ;Always inline makes variants moot.
+	       (setf variants nil))
+	     (setf- append flags n-flags)
+	     (when n-out-type-fn
+	       (setf out-type-fn n-out-type-fn))))))
       (t
-       (error "Set Only works with set_ functions and symbols, not \
-macros.")))))
+       (error "Did not recognize the thing it declaring for.")))))
 
-(rawmac-add will-defun () () (name out-type &rest arg-types)
-  "Allows you to tell a function that you will define in the future.
- (Function inference needs output-type in advance.)"
-  (fun-add name arg-types (:state state) :out-type out-type))
-
-(rawmac-add specialize-fun (:code code) () (name &rest args)
-  "Forces the function that matches to make a version that is 
-specialized to fit the argument types. (Produces error if it doesnt exist.)"
-  `(c-defun ,name (,@args)
-	    ,@(slot-value (fun-get (car code)
-				   (loop for a in args collect (car a))
-				   :state state)
-			  'full-code)))
-
-(rawmac-add lambda (:code code) () (name (&rest args) &rest body)
-  (declare (ignorable name args body))
-  (function-creator 'lambda code type-of :state state))
-
-;Fun-of: getting the function of a symbol.
-(mac-add fun-of () ((any)) (sym)
-;"Defer it to the functions." TODO make one taking the (symbol) argument.
-  (values nil :discard))
-
-(mac-add fun-of () ((eql (symbol sym))) (symbol)
-  `(,(make-instance 'out :name 'fun-of
-       :type `(eql (adapt-fun ,sym)))))
-
-;Funcall
-(mac-add funcall () ((eql (adapt-fun sym)))
-                    ((fun-of symbol) &rest arguments)
-  (unless (eql fun-of 'fun-of)
-    (error "Something must have gone wrong in typeset selection.\
- (Could also be stray macro.)"))
-  (unless (eql sym symbol)
-    (error "Something wrong with type-eql-var?"))
-  `(,sym ,@arguments))
-
-(rawmac-add funcall () ((any)) (function &rest arguments)
-  (let ((fun  (fun-resolve function type-of :state state))
-	(out-type (out-type fun))
-	(args (loop for a in arguments
-		 collect (fun-resolve a type-of :state state))))
-    (cond ;Constant funcalls are done with the actual function.
-      ((not (listp out-type))
-       (error "Generic types not supported yet.\
- Also, this should end up of type (adapt-function (symbol)) or more\
- specific."))
-    ;See if the function matches.
-      ((function-match (loop for a in args collect (out-type a))
-		       (cddr out-type) :state state)
-       `(,(make-instance 'out :name 'funcall :type (cadr out-type))
-	  ,fun ,@args))
-      (t
-       (error "Funcall called with nonmatching argument types with\
- function type.")))))
-
-(rawmac-add flet () () ((&rest fundefs) &rest body)
-  "Make multiple functions available in body."
-  (with-slots (namespaces write-namespace) state
-   ;Trick is to but it in a namespace but one that is not written to.
-    (setf write-namespace (gen-c-name state))
-    (push write-namespace namespaces)
-    (let ((funs ;Now make the functions.
-	   (loop for fundef in fundefs
-	     collect (function-creator 'flet fundef type-of :state state)))
-	  (res (progn ;Flip back namespace writing, resolve.
-		 (setf write-namespace (cadr namespaces))
-		 (fun-resolve `(progn ,@body) type-of :state state))))
-    ;And also flip back reading. (Making the functions inaccessable)
-      (pop namespaces)
-    ;Result.
-      `(,(make-instance 'out :name 'flet :type (out-type res))
-	 ,res ,funs))))
-
-(mac-add flet1 () () ((fundef) &rest body)
-  "Make single function available in body."
-  `(flet ((,fundef)) ,@body))
-
-(mac-add hard-defun () () (name (&rest arg-types) out-type
-			   &key |:flags| |:names| |:make-fun| |:arg-names|
-			   |:doc-str|)
-  "Adds a function that is implemented in conversion to final language."
-  (fun-add name arg-types item :out-type out-type
-	   :flags (cons :hard (loop for f in |:flags|
-				 collect
-				   (case f
-				     (|:chase-args| :chase-args)
-				     (t f))))
-	   :names |:names|)
-  (unless |:make-fun|
-    (unless arg-names
-      (setf arg-names (loop for a in arg-types
-			 collect (gen-c-name state))))
-    ;Makes the actual function, for a passable pointer.
-    (fun-resolve 
-     `(defun ,(intern (format nil "-lang-hard-~D" name))
-	  (,@(loop for an in arg-names
-		   for a in arg-types
-		collect `(,an ,a)))
-	,@(if-use doc-str)
-	(,name ,@arg-names))
-     nil :state state)))
+(mac-add |funcall| (:*local local) (fun &rest args)
+  "Uses function with the arguments. Arguments must be right count"
+  (fun-resolve local (all-resolve local fun) args))

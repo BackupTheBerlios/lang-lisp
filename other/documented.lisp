@@ -1,5 +1,6 @@
+
 ;;
-;;  Copyright (C) 2009-02-07 Jasper den Ouden.
+;;  Copyright (C) 2009-04-06 Jasper den Ouden.
 ;;
 ;;  This file is part of Lang(working title).
 ;;
@@ -17,7 +18,13 @@
 ;;  along with Lang.  If not, see <http://www.gnu.org/licenses/>.
 ;;
 
-      
-        
+(defpackage #:documented
+  (:use #:common-lisp)
+  (:export documented doc-str))
+
+(in-package #:documented)
+
+(defclass documented ()
+  ((doc-str :initform "" :type string :initarg :doc-str :accessor doc-str)))
 
 

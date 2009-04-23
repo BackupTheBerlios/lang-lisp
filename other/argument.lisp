@@ -33,7 +33,8 @@
   (when (keywordp keyword)
     (string= (symbol-name symbol) (symbol-name keyword))))
 
-(defun do-by-argument (arguments on-list do-fun &optional reverse-chain)
+(defun do-by-argument (arguments on-list do-fun
+		       &optional reverse-chain (is-other (lambda (sym) nil)))
   "Funcalls do-fun analogously with the arguments in the list. The \
 function is called element, argument name(including default), the reverse
  of the chain of nth's that get you there, and whether the argument was 
@@ -57,7 +58,8 @@ and the list did not."
 	       (setf- + n 1)))
 	(cond
 	  ((unless (or key optional (null a)) (listp (car a)))
-	   (do-by-argument (car a) (car i) do-fun (reverse-chain)))
+	   (unless (funcall is-other (car a))
+	     (do-by-argument (car a) (car i) do-fun (reverse-chain))))
 	  ((eql (car a) '&optional)
 	   (setf a (cdr a))
 	   (setf optional t)

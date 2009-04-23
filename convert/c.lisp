@@ -38,9 +38,11 @@
 
 (defun conv-c-state-changed (conv-state &key return in)
   "Returns a changed copy."
+  (when (eql return :same)
+    (setf return (slot-value conv-state 'return)))
+  (when (eql in :same)
+    (setf in (slot-value conv-state 'in)))
   (with-slots (conv-fun conv-value conv-macs state) conv-state
-    (when (eql return :same) (setf return (slot-value conv-state 'return)))
-    (when (eql in :same) (setf in (slot-value conv-state 'in)))
     (make-instance 'conv-c-state :state state :return return :in in
 		   :fun conv-fun :value conv-value :macs conv-macs)))
 
@@ -93,12 +95,12 @@ variable name."
 (make-conv *conv-c-macs* 'progn (&rest body)
   "Progn"
   (flet ((list-ize (x) (if (listp x) x (list x))))
-  (iter (for c on body)
-	(appending (list-ize
-	 (if (null (cdr c))
-	     (conv (car c)
-		   (conv-c-state-changed conv-state :return :same))
-	     (conv (car c))))))))
+    (iter (for c on body)
+	  (appending (list-ize
+	    (if (null (cdr c))
+	      (conv (car c) (conv-c-state-changed conv-state :return :same))
+	      (conv (car c)
+		    (conv-c-state-changed conv-state))))))))
 
 (make-conv *conv-c-macs* 'let (vars body)
   "Let"
@@ -113,7 +115,8 @@ variable name."
 
 (make-conv *conv-c-macs* 'while (cond body)
   "While"
-  `(,(format nil "while (~D)" (conv cond))
+  `(;(:no-semicolon
+     ,(format nil "while (~D)" (conv cond));)
     ,(conv-code body (conv-c-state-changed conv-state))))
 
 (make-conv *conv-c-macs* 'void-end ()
@@ -147,7 +150,9 @@ variable name."
 
 (defun c-conv-value (code conv-state)
   "Value useage conversion to C."
-  (from (car code)))
+  (if (slot-value conv-state 'return)
+    (format nil "return ~D" (from (car code)))
+    (from (car code))))
 
 (setf *c-conv-state*
   (make-instance 'conv-c-state
@@ -157,18 +162,23 @@ variable name."
 
 (defun c-body-ize (list &key (tabdepth 1))
   "Interprets nested lists as c-bodies."
-  (format nil (format nil "~~~DT{~~%~~{~~a;~%~~}~~~DT}"
-		      (- tabdepth 1) (- tabdepth 1))
-    (iter
-      (for el in list)
-      (collect (cond ((listp el)
-		      (c-body-ize el :tabdepth (+ tabdepth 1)))
-		     ((= tabdepth 0)
-		      el)
-		     ((> tabdepth 0)
-		      (format nil (format nil "~~~DT~~D" tabdepth) el))
-		     (t
-		      (error "Lower-then-zero tabdepth.")))))))
+  (format nil (format nil "~~~DT{~~%~~{~~~DT~~a~%~~}~~~DT}"
+		      (- tabdepth 1) tabdepth (- tabdepth 1))
+    (iter (for el in list)
+	  (collect
+	      (cond
+		((listp el)
+		 (case (car el)
+		   (:no-semicolon
+		    (cadr el))
+		   (t
+		    (c-body-ize el :tabdepth (+ tabdepth 1)))))
+		((= tabdepth 0)
+		 (format nil "~D;" el))
+		((> tabdepth 0)
+		 (format nil "~D;" el))
+		(t
+		 (error "Lower-then-zero tabdepth.")))))))
 
 ;;TODO convert code for C.
 (defun c-conv-function (fun &optional (conv-state *c-conv-state*))

@@ -1,5 +1,5 @@
 ;;
-;;  Copyright (C) 2009-02-07 Jasper den Ouden.
+;;  Copyright (C) 2009-04-08 Jasper den Ouden.
 ;;
 ;;  This file is part of Lang(working title).
 ;;
@@ -18,103 +18,103 @@
 ;;
 
 (defpackage #:namespace
-  (:use #:common-lisp #:generic)
-  (:export namespace-state
-   ;Looks like i am accessing this a lot, is it bad?
-    namespaces write-namespace
-    namespace-symbol get-symbol get-symbol-assoc gen-c-name
-    namespace-to-nil with-namespace-to-nil with-namespace))
+  (:use #:common-lisp #:generic #:iterate #:documented)
+  (:export *namespace-hash* namespace-local
+	   namespaces write-namespace
+	   symbol-exported-p
+	   namespace-symbol symget
+	   gen-symbol))
 
 (in-package #:namespace)
 
-(defclass namespace-state ()
- ;For generating symbols.
-  ((gen-str :initform 'gen)
-   (gen-cnt :initform 0)
-   
-   (namespaces :initform nil)
- ;The one new stuff should go to. (Use of it is in flet and such.)
-   (write-namespace :initform nil)))
+(defclass namespace (documented)
+  ((export :documentation "What is exported. If :all, all, otherwise list\
+ of symbols."
+	   :initform :all :initarg :export-manner)
+   (not-export :documentation "What is not exported, overrides "))
+  (:documentation "A namespace"))
 
-(defun append-namespace (namespace symbol)
-  (intern (format nil "~D-~D" namespace symbol)))
+(defun symbol-exported-p (namespace symbol)
+  "Returns true if the symbol is exported."
+  (if (null namespace) t
+      (with-slots (export not-export) namespace
+	(or (and (eql export :all)
+		 (not (in-list not-export symbol)))
+	    (in-list export symbol)))))
 
-(defun namespace-symbol (symbol state)
+(defvar *namespace-hash* (make-hash-table) "All current namespaces.")
+
+(defclass namespace-local ()
+  ((namespaces :documentation "Namespaces in the order we try them for a\
+ match" :initform nil :initarg :namespaces)
+   (write-namespace :documentation "Namespace that currently is written to."
+		    :initform nil :initarg :write-namespace)
+   (gen-str :documentation "Prepended before number of namespace."
+	    :initform 'gen)
+   (gen-cnt :initform 0)))
+
+(defun prepend-name (name symbol)
+  (intern (format nil "~D:~D" name symbol)))
+
+(defun namespace-symbol (local symbol)
   "Adds current namespace to symbol."
-  (with-slots (write-namespace) state
+  (with-slots (write-namespace) local
     (if (null write-namespace)
-	symbol (append-namespace write-namespace symbol))))
+	symbol (prepend-name write-namespace symbol))))
+
+(defgeneric symget (local from symbol)
+  (:documentation "Gets a symbol."))
 
 ;Get from hash table.
-(defun get-symbol (symbol from state)
+(defun gethash-symbol (local from symbol &key set-to)
   "Gets a symbol from an hash table."
-  (let (got)
-    (loop for namespace in (slot-value state 'namespaces)
-       until (setf got (gethash (append-namespace namespace symbol) from)))
-    (if-use got (gethash symbol from))))
+  (if-use
+   (with-slots (namespaces) local
+     (iter ;Search namespaces.
+       (for prepend in namespaces)
+       (when-with got (gethash (prepend-name prepend symbol) from)
+	 (when (namespace-exported-p (gethash namespace *namespace-hash*))
+	   (return
+	     (if set-to
+		 (setf (gethash (prepend-name prepend symbol) from) set-to)
+		 got))))))
+   (if set-to ;It was in namespace-less.(Those are all exported.)
+     (setf (gethash symbol from) set-to)
+     (gethash symbol from))))
 
-(defun (setf get-symbol) (to symbol from state)
-  "Sets a symbol from an hash table."
-  (setf (gethash (namespace-symbol symbol state) from) to))
+(defmethod symget ((local namespace-local) (hash hash-table) (symbol symbol))
+  (gethash-symbol local hash symbol))
+
+(defmethod (setf symget) (to (local namespace-local) (hash hash-table)
+		      (symbol symbol))
+  "Sets a symbol from an hash table. TODO need to check stuff, like if\
+ exported."
+  (gethash-symbol local hash symbol :set-to to))
 
 ;Get from association list.
-(defun get-symbol-assoc (symbol from state)
+(defmethod symget ((local namespace-local) (from list) (symbol symbol))
   "Gets a symbol from an assoc list."
-  (let ((from (car from)) got with-name)
-    (loop for namespace in (slot-value state 'namespaces)
-       until (setf got (assoc (setf with-name 
-				    (append-namespace namespace symbol))
-			      from)))
-    (if got
-	(values (cadr got) with-name)
-	(values (cadr (assoc symbol from)) symbol))))
+  (if-use (iter (for name in (slot-value local 'namespaces))
+		(let* ((with-name (prepend-name name symbol))
+		       (got-assoc (assoc with-name (car from))))
+		  (when got-assoc
+		    (return (values (cadr got-assoc) got-assoc with-name)))))
+	  (let ((got-assoc (assoc symbol (car from))))
+	    (values (cadr got-assoc) got-assoc symbol))))
 
-(defun (setf get-symbol-assoc) (to symbol from state)
-  "Sets a symbol from an assoc list."
-  (cond
-    ((loop for namespace in (slot-value state 'namespaces)
-	when (assoc (append-namespace namespace symbol) (car from))
-	return (setf (cadr (assoc (append-namespace namespace symbol)
-				  (car from)))
-		     to))
-       to)
-    ((assoc symbol (car from))
-     (setf (cadr (assoc symbol (car from))) to))
-    (t
-     (push (list (namespace-symbol symbol state) to)
-	   (car from)))))
+(defmethod (setf symget) (to (local namespace-local) (from list)
+			  (symbol symbol))
+  "Sets a symbol from an assoc list. NOTE try not use it."
+  (multiple-value-bind (got item) (symget local from symbol)
+    (if item
+	(setf (cadr item) to)
+	(push (list (namespace-symbol local symbol) to)
+	      (car from)))))
 
-(defun gen-c-name (state)
+(defun gen-symbol (local)
 "Generates a name symbol."
 ;(NOTE if this doesnt play well with hash table, do something about it.)
-  (with-slots (namespaces gen-str gen-cnt) state
+  (with-slots (gen-str gen-cnt write-namespace) local
     (setf- + gen-cnt 1)
-    (intern(format nil "~D~D~D" (if-use (car namespaces) "")
+    (intern(format nil "~D~D~D" (if-use write-namespace "")
 		                gen-str gen-cnt))))
-
-(defun namespace-to-nil (state)
-  (with-slots (namespaces write-namespace) state
-    (setf namespaces nil)
-    (setf write-namespace nil)))
-
-(defun with-namespace-to-nil (state fun)
-  "Remove current namespace state for function duration."
-  (with-slots (namespaces write-namespace load-lib-actions) state
-    (let ((save-namespaces namespaces) ;Flip namespace data back and forth.
-	  (save-write-namespace write-namespace))
-      (namespace-to-nil)
-      (funcall fun)
-      (setf namespaces save-namespaces)
-      (setf write-namespace save-write-namespace))))
-
-(defun with-namespace (with state fun)
-  "Adds namespace, does function, goes back to previous state.
-Returns function result."
-  (with-slots (namespaces write-namespace) state
-    (let ((write-was write-namespace))
-      (setf write-namespace with)
-      (push with namespaces)
-      (let ((out (funcall fun)))
-	(setf write-namespace write-was)
-	(pop namespaces)
-	out))))

@@ -2,7 +2,6 @@
 (in-package #:lang)
 
 (defun treat-type (type)
-  "Cleans up a type, removes redundant parts, simplifies."
   (when (eql (car type) '|or|)
     (setf type `(|or| ,@(treat-type-or (cdr type)))))
   (setf type `(|or| ,@(treat-type-numeric-or (cdr type))))
@@ -11,35 +10,39 @@
 
 (defun treat-type-or (types)
   "Removes all sub-ors."
-  (iter (for tp in types)
-	(if (eql '|or| (car tp))
-	  (appending (treat-type-or (cdr tp)))
-	  (collect tp))))
-
-(defun inside-numtype (tp x)
-  "Returns if a single position is inside a numtype."
-  (case (car tp)
-    (|eql|    (when (= (cadr tp) x) tp))
-    (|number| (when (<= (cadr tp) x (caddr tp)) tp))
-    (|or|     (dolist (type (cdr tp))
-		(when (inside-numtype type x)
-		  (return type))))))
+  (do ((found t found)) ((not found) nil)
+    (setf types ;Flatten out sub-ors.
+	  (iter (for tp in types)
+		(cond
+		  ((eql (car tp) '|or|)
+		   (setf found t)
+		   (appending (cdr tp)))
+		  (t
+		   (setf found nil)
+		   (collect tp))))))
+  types)
 
 (defun join-type-numeric (a b)
   "Returns nil if the two are separate, the new joined type if they're not."
-  (case (car a)
-    (|eql|
-     (inside-numtype b (cadr a)))
-    (|number|
-     (flet ((in-range (rl x)
-	      (<= (cadr rl) x (caddr rl))))
+  (flet ((in-range (x of)
+	   (<= (cadr of) x (caddr of))))
+    (case (car a)
+      (|eql|
        (case (car b)
 	 (|eql|
-	  (when (in-range a (cadr b))
+	  (when (= (cadr a) (cadr b))
 	    a))
 	 (|number|
-	  (when (or (in-range a (cadr b)) (in-range a (caddr b))
-		    (in-range b (cadr a)) (in-range b (caddr a)))
+	  (when (in-range (cadr a) b)
+	    b))))
+      (|number|
+       (case (car b)
+	 (|eql|
+	  (when (in-range (cadr b) a)
+	    a))
+	 (|number|
+	  (when (or (in-range (cadr a) b) (in-range (caddr a) b)
+		    (in-range (cadr b) a) (in-range (caddr b) a))
 	    `(|number| ,(min (cadr a) (cadr b))
 		       ,(max (caddr a) (caddr b))))))))))
 
@@ -47,16 +50,12 @@
   "Removes overlap in orred intervals."
   (if (null(cdr types))
     types
-    (let ((joined (car types)) (altered t)
-	  (unjoined (cdr types)))
-      (do () ((not altered) nil)
-	(setf altered nil)
-	(setf unjoined
-	      (iter (for tp in unjoined)
-		    (if-with new-joined (join-type-numeric joined tp)
-		      (progn (setf altered t)
-			     (setf joined new-joined))
-		      (collect tp)))))
+    (let*((joined (car types))
+	  (unjoined
+	   (iter (for tp in (cdr types))
+		 (if-with new-joined (join-type-numeric joined tp)
+		   (setf joined new-joined)
+		   (collect tp)))))
       (cons joined
 	    (treat-type-numeric-or unjoined)))))
 
@@ -106,7 +105,7 @@
 	((null types) tp))))
   
 (defun to-out-type-fn-via-bin (fn)
-  (to-out-type-fn (to-type-list-via-bin fn)))
+  (to-out-type-fn (to-type-list-via-binary fn)))
 
 (defun to-out-type-fn (fn)
   (lambda (fun types)
@@ -114,9 +113,9 @@
     (funcall fn types)))
 
 (fun-add *local* '+ :names '(:usual +)
-  :out-type-fn (to-out-type-fn-via-bin #'types-+))
+  :out-type-fn (to-out-type-fn-via-binary #'types-+))
 (fun-add *local* '* :names '(:usual *)
-  :out-type-fn (to-out-type-fn-via-bin #'types-*))
+  :out-type-fn (to-out-type-fn-via-binary #'types-*))
 
 (defun types-- (tp)
   (case (car tp)
@@ -162,7 +161,7 @@
       (funcall inverse (car types))
       (funcall fn (car types)
 	          (funcall inverse
-			   (funcall (to-type-list-via-bin fn)
+			   (funcall (to-type-list-via-binary fn)
 				    (cdr types)))))))
 
 (defun to-out-type-fn-inverse-bin (inverse fn)

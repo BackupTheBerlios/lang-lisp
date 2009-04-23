@@ -28,59 +28,15 @@
 (evalm str res "progn-raw
   (do-times 4 (i) i)")
 
-(setf (get-symbol 'do-times (slot-value *state* 'macs) *state*) nil)
-
 (print 'a)
 
-(evalm str c "progn-raw
-  (let (a 2;)
-    (namespace mew
-     (let (b 2;)
-       (* a b)))")
+(evalm res lisp (code-funarg-debody (evalm str res "progn (+ 2 3 4")))
 
-;Hmm, doesn't work for to C, does work to summary.
-(evalm str c "progn-raw (defun name (x (any);) x)")
+(evalm str sum "defun meh (x y) (+ x (* 2 y))"))
 
-(evalm str res "progn-raw
-  (defun meh (a (int64); b (int64)) (+ (* a b) b a))" :body-level t)
-;Note: this one needs meh )defined above
-(evalm str c "progn-raw
-  (let (a 3 ; b 6) |
-    + a (bit-or (+ a 6 1) (meh a b));)")
+(slot-value (fun-get *local* '|meh|) 'variants)
 
-(evalm str c
-       "progn (let ((a (+ 1 (+ 1 2))) (b 2)) (meh (* (+ 2 3) a) b))")
-
-;TODO decrease dud variables in C output.
-
-;TODO it lost the first let, setting c,
-; Hmm, it is when more then one element in progn.
-(evalm str lisp "progn-raw
-  (let (a 45 ; b 61)
-    (+ (let ((q 3)) (+ q 2)) 6)
-    (progn 5 6 2)
-    (+ a (let ((c (* (let ((d a)) (+ b d)) 2))) 1 (* c b))))")
-
-(macroexpand-1 '
-(argumentize-list ((a b) c) '((1 2) 3)
-		 (list a b c)))
-
-;TODO bug
-(evalm str lisp "progn | meh 2 5;
-  while (2) (meh 1 2) 1;")
-
-;TODO decrease the ammount of scopes in stuff like this..
-(evalm str c "progn-raw
-  (let (a 56;) (let ((ref b) 2;) (+ a b)))")
-
-(slot-value *state* 'manual-type-coarser)
-
-(process-fun (fun-get '|meh| '((|int64|) (|int64|))))
-
-(evalm str res "progn-raw
-  (defun main ((argc (int32)) (argv (ptr(ptr(int8)))))
-    0)")
-(process-fun (fun-get '|main| '((|int32|) (|ptr|(|ptr|(|int8|))))))
+(evalm str res "+ 3 (meh 4 5)") ;TODO make satisfying-subset.
 
 (load "read/read-c.lisp")
 

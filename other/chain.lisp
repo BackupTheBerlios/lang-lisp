@@ -20,7 +20,12 @@
 
 ;;TODO see if any good libs for this around.
 
-(in-package #:lang)
+(defpackage #:chain
+  (:use #:common-lisp #:generic)
+  (:export get-conv def-conv evalf evalm chain-convs
+	   input rest))
+
+(in-package #:chain)
 
 (defvar *default-conv* (list nil))
 

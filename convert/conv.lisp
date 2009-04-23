@@ -19,41 +19,22 @@
 
 (in-package #:lang)
 
-(defclass conv-state ()
-  ((conv-fun :initarg :fun)
-   (conv-value :initarg :value)
-   (conv-macs :initarg :macs)))
-
-(defun make-conv-state (fun value macs)
-  (make-instance 'conv-state :fun fun :value value :macs macs))
-
-(defun conv-code (code conv-state)
+(defun conv-code (code conv-macs)
   "Converts lang resolved code into something else.
 It is not flexible enough to do C on purpose, the plan is to have\
  transformations on resolved code instead, changing its properties so that\
  this can convert it."
-  (unless (listp code)
-    (setf- list code))
-  (with-slots (conv-fun conv-value conv-macs) conv-state
-    (case (type-of (car code))
-      (fun
-       (funcall conv-fun code conv-state))
-      (value
-       (funcall conv-value code conv-state))
-      (out
-       (if-with mac-fun (gethash (slot-value (car code) 'name) conv-macs)
-	 (funcall mac-fun code conv-state)
-	 (error (format nil 
-			"Couldn't find conversion for a macro output ~D."
-			(slot-value (car code) 'name))))))))
+  (if-with mac-fun (gethash (type-of code) conv-macs)
+    (funcall mac-fun code conv-macs)
+    (error "Couldn't find conversion for a macro output ~D." code)))
 
-(defmacro make-conv (hash name (&rest args) &body body)
+(defmacro make-conv (hash name (&rest slots) &body body)
   "Makes making a conv more convenient.
  Makes variables self, code and conv-state, and conv in flet."
   `(setf (gethash ,name ,hash)
-	 (lambda (code conv-state)
-	   (flet ((conv (c &optional (state conv-state))
-		    (conv-code c state)))
-	     (argumentize-list (self ,@args) code
+	 (lambda (code conv-macs)
+	   (flet ((conv (c &optional (conv-macs conv-macs))
+		    (conv-code c conv-macs)))
+	     (with-slots (,@slots) code
 	       ,@body)))))
 

@@ -61,16 +61,17 @@ Nil if it doesn't recognize it." ;TODO put in proper file.
 
 (def-conv eval-code-res (code res)
   "Evaluate from token code to resolved."
-  (fun-resolve input (getf rest :vars)
-	       :state (if-use (getf rest :state) *state*)))
+  (all-resolve (if-use (getf rest :local) *local*) input))
 
 (def-conv eval-res-c (res c :input res)
   "Evaluate from resolved to C code." ;TODO intermediate 'res-funarg-debody?
-  (c-body-ize (conv-code (code-funarg-debody res)
-			 *c-conv-state*)))
+  (destructuring-bind (&key (return :same)) rest
+    (c-body-ize (conv-code (code-funarg-debody res)
+			   (conv-c-state-changed *c-conv-state*
+						 :return return)))))
 
 (def-conv eval-res-lisp (res lisp)
-  (conv-code input *lisp-conv-state*))
+  (conv-code input *conv-lisp-macs*))
 
 (def-conv eval-res-eval-lisp (lisp eval-lisp)
   (eval input))
@@ -79,21 +80,31 @@ Nil if it doesn't recognize it." ;TODO put in proper file.
   "From resolved code to more readable summary."
   (destructuring-bind (&key more-on-fun more-on-mac) rest
     (flet ((summary (sub-input)
-	     (evalm res sum sub-input)))
+	     (evalm res sum sub-input))
+	   (non-list-whine (must-be-list)
+	     (unless (listp must-be-list)
+	       (error "Iterate should be whining, but i guess i should \
+instead. ~D is not a list." must-be-list))))
       (case (type-of input)
 	(cons
 	 (iter (for el in input)
 	       (collect (summary el))))
-	(fun
-	 (with-slots (name arg-types out-type more-specific) input
-	   `(:fun ,name ,arg-types ,out-type
-		  ,@(cond
-		     (more-on-fun
-		      `(:more-specific ,(summary more-specific)))))))
-	(out
-	 (with-slots (name out-type code) input
-	   (append (list :out name out-type)
-		   (when more-on-mac `(:code ,(summary code))))))
+	(applied-fun
+	 (with-slots (fun out-type args) input
+	 `(:fun ,(slot-value fun 'name) ,out-type 
+	   :a ,(eval-res-sum args rest))))
+	(-progn
+	 (with-slots (body) input
+	   (non-list-whine body)
+	   `(:progn ,@(eval-res-sum body rest))))
+	(-let
+	 (with-slots (vars body) input
+	   (non-list-whine body)
+	   `(:let ,(when vars
+		    (iter (for v in vars)
+			  (collect (list (car v)
+					 (eval-res-sum (cadr v) rest)))))
+	      ,@(eval-res-sum body rest))))
 	(value
 	 (with-slots (out-type from) input
 	   `(:val ,(summary from) ,out-type)))
@@ -107,32 +118,3 @@ Nil if it doesn't recognize it." ;TODO put in proper file.
 (chain-convs '(str getstr code res c))
 (chain-convs '(str getstr code res lisp eval-lisp))
 
-;;Old version.
-(defmacro a-evalm (from to arg &rest keys)
-  "Evaluates from some point to another, better use this instead
-of the functions."
-  (flet ((getkey (key) (when-with got (getf keys key) `(,key ,got))))
-    (case from
-      ((file stream str)
-       (let ((eval (case from
-		     (file   'eval-file-code)
-		     (stream 'eval-stream-code)
-		     (str    'eval-str-code))))
-	 (case to
-	   (code `(,eval ,arg))
-	   ((res c sum)
-	    `(a-evalm code ,to (,eval ,arg) ,@keys)))))
-      (code
-       (case to
-	 (res  `(eval-code-res ,arg
-			       ,@(getkey :state) ,@(getkey :vars)))
-	 
-	 ((c sum)
-	  `(a-evalm res ,to (eval-code-res ,arg
-					 ,@(getkey :state) ,@(getkey :vars))
-		  ,@keys))))
-      (res
-       (case to
-	 (c    `(eval-res-c ,arg ,@(getkey :body-level) ,@(getkey :fun-level)))
-	 (sum  `(eval-res-sum ,arg ,@(getkey :more-on-fun)
-			      ,@(getkey :more-on-mac))))))))

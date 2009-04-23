@@ -19,8 +19,17 @@
 
 (in-package #:lang)
 
-(setf (fun-state-manual-type-coarser *state* '|any|)
-      (lambda (type compare-type state vars)
-	(declare (ignorable compare-type state))
-	(when (listp type)
-	  (eql (car type) '|any|))))
+;Functions. (Getting them individually in fun-get.lisp)
+(defvar *funs* (make-hash-table))
+
+;(raw)Macros. (Getting these individually in mac-get.lisp)
+(defvar *macs* (make-hash-table))
+
+(defgeneric get-name (obj of-language)
+  (:documentation "Get name of things for different output languages."))
+
+(defmethod get-name (obj (of-lang symbol))
+  (getf (slot-value obj 'names) of-lang))
+
+(defmethod (setf get-name) (to obj (of-lang symbol))
+  (setf (getf (slot-value obj 'names) of-lang) to))
